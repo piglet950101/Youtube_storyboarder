@@ -1,0 +1,5 @@
+{
+  "name": "CineGen JP - YouTube Storyboarder",
+  "description": "A professional tool to generate consistent, photorealistic 16:9 storyboards for YouTube scenarios using Gemini AI. Features character consistency, scene direction, and batch generation.",
+  "requestFramePermissions": []
+}
