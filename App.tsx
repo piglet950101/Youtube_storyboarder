@@ -226,7 +226,15 @@ const AppContent: React.FC = () => {
           )}
         </div>
         <div className="group relative">
-           <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-zinc-700" />
+           {/* <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-zinc-700" /> */}
+           {user.photoURL ? (
+              <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-zinc-700" />
+            ) : (
+              <div className="w-8 h-8 rounded-full border border-zinc-700 bg-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-400">
+                {user.displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
+
            <div className="absolute right-0 top-full mt-2 w-48 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity z-50">
               <div className="p-3 border-b border-zinc-800">
                 <p className="text-sm font-bold truncate">{user.displayName}</p>

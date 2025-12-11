@@ -46,48 +46,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initAuth();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session) => {
-      if (session) {
-        setSession(session);
-        await loadUserProfile(session.user.id);
-      } else {
-        setSession(null);
-        setUser(null);
-      }
-    });
+const {
+  data: { subscription },
+} = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session) => {
+  if (session) {
+    setSession(session);
+    setLoading(true);
+    try {
+      await loadUserProfile(session.user.id);
+    } catch (err) {
+      console.error('[Auth] Profile load failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  } else {
+    setSession(null);
+    setUser(null);
+    setLoading(false);
+  }
+});
+
 
     return () => {
       subscription?.unsubscribe();
     };
   }, []);
 
-  const loadUserProfile = async (userId: string) => {
-    try {
-      const { data, error: profileError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+const loadUserProfile = async (userId: string) => {
+  try {
+    console.log('[Auth] Loading profile for user:', userId);
 
-      if (profileError) throw profileError;
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Profile loading timeout (15s)')), 15000)
+    );
 
-      setUser({
-        uid: data.id,
-        displayName: data.display_name || 'User',
-        email: data.email,
-        photoURL: data.photo_url || '',
-        plan: data.plan_tier as PlanTier,
-        tokens: data.token_balance,
-      });
+    const profilePromise = supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-      setError(null);
-    } catch (err) {
-      console.error('Failed to load user profile:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load profile');
-    }
-  };
+    const { data, error: profileError } = await Promise.race([
+      profilePromise,
+      timeoutPromise as any,
+    ]);
+
+    if (profileError) throw profileError;
+
+    if (!data) throw new Error('User profile not found');
+
+    console.log('[Auth] Profile loaded successfully');
+
+    setUser({
+      uid: data.id,
+      displayName: data.display_name || 'User',
+      email: data.email,
+      photoURL: data.photo_url || '',
+      plan: data.plan_tier as PlanTier,
+      tokens: data.token_balance,
+    });
+
+    setError(null);
+  } catch (err) {
+    console.error('[Auth] Error loading profile:', err);
+    const message = err instanceof Error ? err.message : 'Failed to load profile';
+    setError(message);
+  }
+};
+
 
   const loginWithGoogle = async () => {
     setLoading(true);
