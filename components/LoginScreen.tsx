@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Clapperboard, AlertCircle, Loader2, Eye, EyeOff, Mail, Lock, User as UserIcon, ArrowRight } from 'lucide-react';
 
@@ -139,8 +139,20 @@ export const LoginScreen: React.FC = () => {
     }
   };
 
-  const toggleAuthMode = () => {
-    setAuthMode(authMode === 'login' ? 'signup' : 'login');
+  // const toggleAuthMode = () => {
+  //   setAuthMode(authMode === 'login' ? 'signup' : 'login');
+  //   setFormState({
+  //     email: '',
+  //     password: '',
+  //     displayName: '',
+  //     confirmPassword: '',
+  //   });
+  //   setFormErrors({});
+  //   setSuccessMessage('');
+  // };
+
+  const toggleAuthMode = useCallback(() => {
+    setAuthMode(prev => prev === 'login' ? 'signup' : 'login');
     setFormState({
       email: '',
       password: '',
@@ -149,7 +161,7 @@ export const LoginScreen: React.FC = () => {
     });
     setFormErrors({});
     setSuccessMessage('');
-  };
+  }, []);
 
   const isFormDisabled = loading || isProcessing;
 
@@ -170,7 +182,8 @@ export const LoginScreen: React.FC = () => {
 
         <div className="flex gap-2 mb-8 bg-zinc-800 rounded-lg p-1">
           <button
-            onClick={() => !isFormDisabled && toggleAuthMode()}
+            // onClick={() => !isFormDisabled && toggleAuthMode()}
+            onClick={toggleAuthMode}
             disabled={isFormDisabled}
             className={`flex-1 py-2 px-4 rounded-md font-semibold transition-all ${
               authMode === 'login'
@@ -181,7 +194,8 @@ export const LoginScreen: React.FC = () => {
             ログイン
           </button>
           <button
-            onClick={() => !isFormDisabled && toggleAuthMode()}
+            // onClick={() => !isFormDisabled && toggleAuthMode()}
+            onClick={toggleAuthMode}
             disabled={isFormDisabled}
             className={`flex-1 py-2 px-4 rounded-md font-semibold transition-all ${
               authMode === 'signup'
