@@ -12,6 +12,7 @@ guides
 dist
 dist-ssr
 *.local
+*.example
 
 # Editor directories and files
 .vscode/*
