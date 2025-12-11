@@ -1,5 +1,5 @@
-
 import React, { useState } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { AppStep, Character, Scene } from './types';
 import { StepIndicator } from './components/StepIndicator';
 import { ScenarioInput } from './components/ScenarioInput';
@@ -7,6 +7,7 @@ import { CharacterManager } from './components/CharacterManager';
 import { StoryboardEditor } from './components/StoryboardEditor';
 import { ImageGenerator } from './components/ImageGenerator';
 import { LoginScreen } from './components/LoginScreen';
+import { AuthCallback } from './pages/AuthCallback';
 import { PricingModal } from './components/PricingModal';
 import { useAuth } from './contexts/AuthContext';
 import { analyzeCharactersFromScript, generateStoryboardScenes, generateCharacterReference } from './services/geminiService';
@@ -40,8 +41,9 @@ const LoadingOverlay: React.FC<{ message: string; subMessage: string; icon?: Rea
   </div>
 );
 
-const App: React.FC = () => {
-  const { user, logout } = useAuth();
+const AppContent: React.FC = () => {
+  const { user, logout, loading } = useAuth();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState<AppStep>(AppStep.SCENARIO_INPUT);
   const [scenario, setScenario] = useState("");
   const [sceneCount, setSceneCount] = useState<number>(20);
@@ -56,6 +58,17 @@ const App: React.FC = () => {
   const [isGeneratingStoryboard, setIsGeneratingStoryboard] = useState(false);
   const [generationProgress, setGenerationProgress] = useState<{current: number, total: number} | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string>("");
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0f0f0f]">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-red-600 animate-spin mx-auto mb-4" />
+          <p className="text-white text-lg">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return <LoginScreen />;
@@ -301,6 +314,15 @@ const App: React.FC = () => {
         )}
       </main>
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <Routes>
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/*" element={<AppContent />} />
+    </Routes>
   );
 };
 
