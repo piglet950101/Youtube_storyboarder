@@ -1,158 +1,278 @@
-
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { User, PlanTier, FREE_INITIAL_TOKENS, STRIPE_PRICING } from '../types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User, PlanTier } from '../types';
+import { supabase } from '../services/supabaseClient';
+import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
-  login: () => Promise<void>;
-  logout: () => void;
-  upgradeToPlan: (tier: 'pro_standard' | 'pro_premium') => void;
-  purchaseTokens: () => void;
+  session: Session | null;
+  loading: boolean;
+  error: string | null;
+  loginWithGoogle: () => Promise<void>;
+  signupWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  upgradeToPlan: (tier: 'pro_standard' | 'pro_premium') => Promise<void>;
+  purchaseTokens: (amount: number) => Promise<void>;
   consumeTokens: (amount: number) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUserState] = useState<User | null>(null);
-  const userRef = useRef<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Wrapper to sync state and ref
-  const setUser = (newUser: User | null) => {
-    setUserState(newUser);
-    userRef.current = newUser;
-  };
-
-  // Load user from local storage on mount (Simulation)
   useEffect(() => {
-    const saved = localStorage.getItem('cinegen_user');
-    if (saved) {
-      setUser(JSON.parse(saved));
-    }
+    const initAuth = async () => {
+      try {
+        const { data, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        if (data.session) {
+          setSession(data.session);
+          await loadUserProfile(data.session.user.id);
+        }
+      } catch (err) {
+        console.error('Auth init error:', err);
+        setError(err instanceof Error ? err.message : 'Auth initialization failed');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session) => {
+      if (session) {
+        setSession(session);
+        await loadUserProfile(session.user.id);
+      } else {
+        setSession(null);
+        setUser(null);
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('cinegen_user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('cinegen_user');
-    }
-  }, [user]);
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-  const login = async () => {
-    // Simulate Google Login
-    // For a new user simulation, we give them the initial free tokens.
-    // In a real app, we would check DB if user exists.
-    const mockUser: User = {
-      uid: 'user_123',
-      displayName: 'テスト ユーザー',
-      email: 'user@example.com',
-      photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
-      plan: 'free',
-      tokens: FREE_INITIAL_TOKENS, // One-time grant
-    };
-    setUser(mockUser);
+      if (profileError) throw profileError;
+
+      setUser({
+        uid: data.id,
+        displayName: data.display_name || 'User',
+        email: data.email,
+        photoURL: data.photo_url || '',
+        plan: data.plan_tier as PlanTier,
+        tokens: data.token_balance,
+      });
+
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load user profile:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load profile');
+    }
   };
 
-  const logout = () => {
-    setUser(null);
+  const loginWithGoogle = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error: signInError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (signInError) throw signInError;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'ログインに失敗しました';
+      setError(message);
+      setLoading(false);
+      throw err;
+    }
   };
 
-  const upgradeToPlan = (tier: 'pro_standard' | 'pro_premium') => {
-    if (!userRef.current) return;
-    const currentUser = userRef.current;
-    
-    let grantTokens = 0;
-    let maxCap = Infinity;
+  const signupWithEmail = async (email: string, password: string, displayName: string) => {
+    setLoading(true);
+    setError(null);
 
-    if (tier === 'pro_standard') {
-        grantTokens = STRIPE_PRICING.standard.initialTokens;
-        maxCap = STRIPE_PRICING.standard.maxTokens;
-    }
-    if (tier === 'pro_premium') {
-        grantTokens = STRIPE_PRICING.premium.initialTokens;
-        maxCap = STRIPE_PRICING.premium.maxTokens;
-    }
+    try {
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: displayName,
+            full_name: displayName,
+          },
+        },
+      });
 
-    // Calculate new total respecting the cap
-    const currentTokens = currentUser.tokens;
-    const potentialTotal = currentTokens + grantTokens;
-    const finalTotal = Math.min(potentialTotal, maxCap);
-    const actualAdded = finalTotal - currentTokens;
+      if (signUpError) throw signUpError;
 
-    setUser({ ...currentUser, plan: tier, tokens: finalTotal }); 
-    
-    let message = `${tier === 'pro_standard' ? 'スタンダード' : 'プレミアム'}プランにアップグレードしました！`;
-    if (actualAdded < grantTokens) {
-        message += `\n(保有上限 ${maxCap.toLocaleString()}t に達したため、${actualAdded.toLocaleString()}t のみが付与されました)`;
-    } else {
-        message += `\n${grantTokens.toLocaleString()}トークンが付与されました。`;
-    }
-    alert(message);
-  };
+      if (!authData.user) throw new Error('Signup failed: No user returned');
 
-  const purchaseTokens = () => {
-    if (!userRef.current || userRef.current.plan === 'free') return;
-    const currentUser = userRef.current;
-
-    let addedTokens = 0;
-    let cost = 0;
-    let maxCap = Infinity;
-
-    if (currentUser.plan === 'pro_standard') {
-      addedTokens = STRIPE_PRICING.standard.topUp.tokens;
-      cost = STRIPE_PRICING.standard.topUp.price;
-      maxCap = STRIPE_PRICING.standard.maxTokens;
-    } else if (currentUser.plan === 'pro_premium') {
-      addedTokens = STRIPE_PRICING.premium.topUp.tokens;
-      cost = STRIPE_PRICING.premium.topUp.price;
-      maxCap = STRIPE_PRICING.premium.maxTokens;
-    }
-
-    const currentTokens = currentUser.tokens;
-    const potentialTotal = currentTokens + addedTokens;
-    const finalTotal = Math.min(potentialTotal, maxCap);
-    const actualAdded = finalTotal - currentTokens;
-
-    if (actualAdded === 0) {
-        alert(`保有上限 (${maxCap.toLocaleString()}t) に達しているため、これ以上購入できません。`);
+      if (!authData.session) {
+        setError('確認メールを送信しました。メールボックスをご確認ください。');
+        setLoading(false);
         return;
-    }
+      }
 
-    setUser({ ...currentUser, tokens: finalTotal });
-    
-    let message = `${cost}円でトークンを購入しました！`;
-    if (actualAdded < addedTokens) {
-        message += `\n(保有上限により ${actualAdded.toLocaleString()}t がチャージされました)`;
-    } else {
-        message += `\n+${addedTokens.toLocaleString()}t`;
+      setSession(authData.session);
+      await loadUserProfile(authData.user.id);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'サインアップに失敗しました';
+      setError(message);
+      setLoading(false);
+      throw err;
     }
-    alert(message);
+  };
+
+  const loginWithEmail = async (email: string, password: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) throw signInError;
+
+      if (!data.session) throw new Error('No session returned');
+
+      setSession(data.session);
+      await loadUserProfile(data.user.id);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'ログインに失敗しました';
+      setError(message);
+      setLoading(false);
+      throw err;
+    }
+  };
+
+  const logout = async () => {
+    setLoading(true);
+
+    try {
+      const { error: signOutError } = await supabase.auth.signOut();
+
+      if (signOutError) throw signOutError;
+
+      setSession(null);
+      setUser(null);
+      setError(null);
+    } catch (err) {
+      console.error('Logout error:', err);
+      setError(err instanceof Error ? err.message : 'ログアウトに失敗しました');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const upgradeToPlan = async (tier: 'pro_standard' | 'pro_premium'): Promise<void> => {
+    try {
+      if (!session) throw new Error('User not authenticated');
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/billing/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ planId: tier }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Checkout failed');
+      }
+
+      const data = await response.json();
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'プラン変更に失敗しました';
+      setError(message);
+      throw err;
+    }
+  };
+
+  const purchaseTokens = async (amount: number): Promise<void> => {
+    try {
+      if (!session) throw new Error('User not authenticated');
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/billing/token-topup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ amount }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Purchase failed');
+      }
+
+      const data = await response.json();
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'トークン購入に失敗しました';
+      setError(message);
+      throw err;
+    }
   };
 
   const consumeTokens = (amount: number): boolean => {
-    // Critical Fix: Use userRef to access the most up-to-date state immediately
-    // This prevents stale closure issues during async batch loops
-    if (!userRef.current) return false;
-
-    if (userRef.current.tokens >= amount) {
-        const newTokens = userRef.current.tokens - amount;
-        const updatedUser = { ...userRef.current, tokens: newTokens };
-        setUser(updatedUser); // Update both state and ref
-        return true;
+    if (!user || user.tokens < amount) {
+      return false;
     }
-    return false;
+
+    setUser(prev => (prev ? { ...prev, tokens: prev.tokens - amount } : null));
+    return true;
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      login, 
-      logout, 
-      upgradeToPlan, 
-      purchaseTokens,
-      consumeTokens
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        loading,
+        error,
+        loginWithGoogle,
+        signupWithEmail,
+        loginWithEmail,
+        logout,
+        upgradeToPlan,
+        purchaseTokens,
+        consumeTokens,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -160,6 +280,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
   return context;
 };
