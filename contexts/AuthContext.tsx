@@ -15,6 +15,7 @@ interface AuthContextType {
   upgradeToPlan: (tier: 'pro_standard' | 'pro_premium') => Promise<void>;
   purchaseTokens: (amount: number) => Promise<void>;
   consumeTokens: (amount: number) => boolean;
+  refreshTokenBalance: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,6 +25,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const loadUserProfile = async (userId: string) => {
+    try {
+      console.log('[Auth] Loading profile for user:', userId);
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Profile loading timeout (15s)')), 15000)
+      );
+
+      const profilePromise = supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      const { data, error: profileError } = await Promise.race([
+        profilePromise,
+        timeoutPromise as any,
+      ]);
+
+      if (profileError) throw profileError;
+
+      if (!data) throw new Error('User profile not found');
+
+      console.log('[Auth] Profile loaded successfully');
+
+      setUser({
+        uid: data.id,
+        displayName: data.display_name || 'User',
+        email: data.email,
+        photoURL: data.photo_url || '',
+        plan: (data.plan_tier || 'free') as PlanTier,
+        tokens: data.token_balance || 100,
+      });
+
+      setError(null);
+    } catch (err) {
+      console.error('[Auth] Error loading profile:', err);
+      const message = err instanceof Error ? err.message : 'Failed to load profile';
+      setError(message);
+    }
+  };
+
+  const refreshUserTokenBalance = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('token_balance, plan_tier')
+        .eq('id', userId)
+        .single();
+
+      if (error || !data) {
+        console.error('[Auth] Error refreshing token balance:', error);
+        return;
+      }
+
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              tokens: data.token_balance || 0,
+              plan: (data.plan_tier || 'free') as PlanTier,
+            }
+          : null
+      );
+    } catch (err) {
+      console.error('[Auth] Error refreshing token balance:', err);
+    }
+  };
 
   useEffect(() => {
     const initAuth = async () => {
@@ -46,74 +116,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initAuth();
 
-const {
-  data: { subscription },
-} = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session) => {
-  if (session) {
-    setSession(session);
-    setLoading(true);
-    try {
-      await loadUserProfile(session.user.id);
-    } catch (err) {
-      console.error('[Auth] Profile load failed:', err);
-    } finally {
-      setLoading(false);
-    }
-  } else {
-    setSession(null);
-    setUser(null);
-    setLoading(false);
-  }
-});
-
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session) => {
+      if (session) {
+        setSession(session);
+        setLoading(true);
+        try {
+          await loadUserProfile(session.user.id);
+        } catch (err) {
+          console.error('[Auth] Profile load failed:', err);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+      }
+    });
 
     return () => {
       subscription?.unsubscribe();
     };
   }, []);
-
-const loadUserProfile = async (userId: string) => {
-  try {
-    console.log('[Auth] Loading profile for user:', userId);
-
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Profile loading timeout (15s)')), 15000)
-    );
-
-    const profilePromise = supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    const { data, error: profileError } = await Promise.race([
-      profilePromise,
-      timeoutPromise as any,
-    ]);
-
-    if (profileError) throw profileError;
-
-    if (!data) throw new Error('User profile not found');
-
-    console.log('[Auth] Profile loaded successfully');
-
-    setUser({
-      uid: data.id,
-      displayName: data.display_name || 'User',
-      email: data.email,
-      photoURL: data.photo_url || '',
-      plan: data.plan_tier as PlanTier,
-      tokens: data.token_balance,
-    });
-
-    setError(null);
-  } catch (err) {
-    console.error('[Auth] Error loading profile:', err);
-    const message = err instanceof Error ? err.message : 'Failed to load profile';
-    setError(message);
-  }
-};
-
 
   const loginWithGoogle = async () => {
     setLoading(true);
@@ -283,6 +309,11 @@ const loadUserProfile = async (userId: string) => {
     return true;
   };
 
+  const refreshTokenBalance = async () => {
+    if (!user) return;
+    await refreshUserTokenBalance(user.uid);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -297,6 +328,7 @@ const loadUserProfile = async (userId: string) => {
         upgradeToPlan,
         purchaseTokens,
         consumeTokens,
+        refreshTokenBalance,
       }}
     >
       {children}

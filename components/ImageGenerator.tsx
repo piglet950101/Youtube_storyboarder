@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Scene, Character, COST_PER_IMAGE } from '../types';
 import { generateSceneImage } from '../services/geminiService';
 import { useAuth } from '../contexts/AuthContext';
+import { validateTokensForGeneration, deductTokensForImage } from '../services/imageGenerationService';
 import { Play, RefreshCw, Download, Edit2, X, Check, Square, Package, Lock, AlertCircle } from 'lucide-react';
 import JSZip from 'jszip';
 
@@ -40,12 +41,16 @@ export const ImageGenerator: React.FC<Props> = ({
   // Function to generate a single image
   const generateSingle = async (scene: Scene) => {
     if (generatingIds.has(scene.id)) return;
+    if (!user) {
+      alert('ログインしてください');
+      return;
+    }
 
-    // Token Check
-    if (!consumeTokens(COST_PER_IMAGE)) {
-         alert(`トークンが不足しています。(必要: ${COST_PER_IMAGE}, 所持: ${user?.tokens})\nプランをアップグレードするか、追加購入してください。`);
-         onOpenPricing();
-         return;
+    const validation = await validateTokensForGeneration(user.uid, COST_PER_IMAGE);
+    if (!validation.valid) {
+      alert(`${validation.reason}\n\nプランをアップグレードするか、トークンを追加購入してください。`);
+      onOpenPricing();
+      return;
     }
 
     setGeneratingIds(prev => new Set(prev).add(scene.id));
@@ -55,6 +60,14 @@ export const ImageGenerator: React.FC<Props> = ({
 
     try {
       const base64 = await generateSceneImage(scene, characters);
+      
+      const deductionResult = await deductTokensForImage(user.uid, COST_PER_IMAGE, scene.id);
+      if (deductionResult.success) {
+        console.log(`Tokens deducted for scene ${scene.id}: ${deductionResult.balanceBefore} → ${deductionResult.balanceAfter}`);
+      } else {
+        console.error(`Failed to deduct tokens: ${deductionResult.error}`);
+      }
+      
       onUpdateScene(scene.id, { generatedImage: base64, isGenerating: false });
     } catch (error) {
       console.error(`Error generating scene ${scene.id}`, error);
