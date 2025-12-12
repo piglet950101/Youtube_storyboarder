@@ -16,10 +16,14 @@
     "@supabase/auth-helpers-react": "^0.4.0",
     "lucide-react": "^0.554.0",
     "@google/genai": "^1.30.0",
-    "jszip": "latest"
+    "jszip": "latest",
+    "@stripe/react-stripe-js": "^5.3.0",
+    "@stripe/stripe-js": "^8.5.1",
+    "stripe": "^14.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/stripe": "^8.0.0",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"

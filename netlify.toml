@@ -11,7 +11,17 @@
   to = "/index.html"
   status = 200
 
+[dev]
+  functions = "netlify/functions"
+  port = 3000
+
 [env.production]
   VITE_SUPABASE_URL = ""
   VITE_SUPABASE_ANON_KEY = ""
   VITE_GEMINI_API_KEY = ""
+  VITE_STRIPE_PUBLIC_KEY = ""
+  STRIPE_SECRET_KEY = ""
+  STRIPE_WEBHOOK_SECRET = ""
+  SUPABASE_URL = ""
+  SUPABASE_SERVICE_KEY = ""
+  STRIPE_API_VERSION = "2024-11-20"
