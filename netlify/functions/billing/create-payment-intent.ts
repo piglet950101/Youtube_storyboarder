@@ -1,6 +1,7 @@
 import { Handler } from '@netlify/functions';
-import Stripe from 'stripe';
+import Stripe = require('stripe');
 import { createClient } from '@supabase/supabase-js';
+import type { Handler } from '@netlify/functions';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 const supabase = createClient(

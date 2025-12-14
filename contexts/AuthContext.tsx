@@ -31,7 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[Auth] Loading profile for user:', userId);
 
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Profile loading timeout (15s)')), 15000)
+                setTimeout(() => reject(new Error('Profile loading timeout (30s)')), 30000)
       );
 
       const profilePromise = supabase
