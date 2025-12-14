@@ -129,18 +129,29 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     const userId = authData.user.id;
 
     // Fetch user record from database
+    // Using SELECT * to avoid column mismatch errors
     const { data: userRecord, error: userError } = await supabase
       .from('users')
-      .select('stripe_customer_id, email, display_name, plan_tier, token_balance')
+      .select('*')
       .eq('id', userId)
       .single();
 
     if (userError || !userRecord) {
-      console.error('User fetch error:', userError);
+      console.error('User fetch error:', {
+        error: userError,
+        userId,
+        supabaseUrl: process.env.SUPABASE_URL ? 'SET' : 'NOT SET',
+        serviceKey: process.env.SUPABASE_SERVICE_KEY ? 'SET' : 'NOT SET',
+      });
       return {
         statusCode: 400,
         headers: corsHeaders,
-        body: JSON.stringify({ error: 'User not found in database' }),
+        body: JSON.stringify({
+          error: 'User not found in database',
+          details: userError?.message || 'No user record returned',
+          hint: userError?.hint,
+          code: userError?.code,
+        }),
       };
     }
 
