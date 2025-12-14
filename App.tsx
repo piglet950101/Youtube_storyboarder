@@ -216,7 +216,7 @@ const AppContent: React.FC = () => {
           onClick={() => setShowPricing(true)}
           className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-full cursor-pointer transition-colors border border-zinc-700"
         >
-          {user.plan === 'pro' ? (
+          {user.plan === 'pro_standard' || user.plan === 'pro_premium' ? (
              <>
                <Zap size={14} className="fill-yellow-400 text-yellow-400" />
                <span className="text-xs font-bold">{user.tokens.toLocaleString()} t</span>

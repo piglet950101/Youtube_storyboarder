@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
       define: {
         'process.env.GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY || ''),
         'process.env.API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY || ''),
-        'process.env.STRIPE_PUBLIC_KEY': JSON.stringify(env.VITE_STRIPE_PUBLIC_KEY || ''),
+        'process.env.VITE_STRIPE_PUBLIC_KEY': JSON.stringify(env.VITE_STRIPE_PUBLIC_KEY || ''),
         'process.env.SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL || ''),
       },
       resolve: {
