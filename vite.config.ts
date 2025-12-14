@@ -9,6 +9,14 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        hmr: {
+          // Prevent full page reload on reconnect
+          overlay: false,
+        },
+        watch: {
+          // Reduce file watching aggressiveness
+          usePolling: false,
+        },
       },
       plugins: [react()],
       define: {

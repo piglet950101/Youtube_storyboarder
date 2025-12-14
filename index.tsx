@@ -6,7 +6,12 @@ import { Elements } from '@stripe/react-stripe-js';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 
-const stripePromise = loadStripe(process.env.VITE_STRIPE_PUBLIC_KEY || '');
+// Load Stripe with the public key from environment
+const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+if (!stripePublicKey) {
+  console.warn('[Stripe] VITE_STRIPE_PUBLIC_KEY is not configured - payment features will be disabled');
+}
+const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

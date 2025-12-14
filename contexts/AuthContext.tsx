@@ -118,18 +118,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session) => {
-      if (session) {
-        setSession(session);
-        setLoading(true);
-        try {
-          await loadUserProfile(session.user.id);
-        } catch (err) {
-          console.error('[Auth] Profile load failed:', err);
-        } finally {
-          setLoading(false);
+    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, newSession) => {
+      console.log('[Auth] Auth state changed:', event);
+
+      // Ignore token refresh events - these happen on window focus and cause reload
+      if (event === 'TOKEN_REFRESHED') {
+        if (newSession) {
+          setSession(newSession);
         }
-      } else {
+        return;
+      }
+
+      // Handle actual sign-in
+      if (event === 'SIGNED_IN' && newSession) {
+        setSession(newSession);
+        // Only reload profile if we don't have user data yet
+        // This prevents the loading screen from showing on window refocus
+        setUser((currentUser) => {
+          if (!currentUser) {
+            // Need to load profile - do it async
+            setLoading(true);
+            loadUserProfile(newSession.user.id).finally(() => setLoading(false));
+          }
+          return currentUser;
+        });
+        return;
+      }
+
+      // Handle sign-out
+      if (event === 'SIGNED_OUT') {
         setSession(null);
         setUser(null);
         setLoading(false);

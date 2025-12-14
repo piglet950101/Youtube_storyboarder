@@ -7,7 +7,7 @@ export const getStripe = async (): Promise<Stripe> => {
     return stripeInstance;
   }
 
-  const publicKey = process.env.VITE_STRIPE_PUBLIC_KEY;
+  const publicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
   if (!publicKey) {
     throw new Error('VITE_STRIPE_PUBLIC_KEY is not configured');
   }
@@ -26,12 +26,19 @@ export interface CreatePaymentIntentPayload {
   tokensAmount?: number;
 }
 
+export interface CreatePaymentIntentResponse {
+  clientSecret: string;
+  paymentIntentId: string;
+  amount: number;
+  tokens: number;
+}
+
 export const createPaymentIntent = async (
   type: 'plan_upgrade' | 'token_topup',
   sessionToken: string,
   payload: CreatePaymentIntentPayload
-): Promise<{ clientSecret: string; paymentIntentId: string }> => {
-  const apiUrl = process.env.VITE_API_URL;
+): Promise<CreatePaymentIntentResponse> => {
+  const apiUrl = import.meta.env.VITE_API_URL;
   if (!apiUrl) {
     throw new Error('VITE_API_URL is not configured');
   }
@@ -45,9 +52,9 @@ export const createPaymentIntent = async (
     body: JSON.stringify({ type, ...payload }),
   });
 
-    if (!response.ok) {
+  if (!response.ok) {
     let errorMessage = `Payment intent creation failed (${response.status} ${response.statusText})`;
-    
+
     if (response.status === 404) {
       errorMessage = 'Netlify Functions not found. Make sure to run: netlify dev';
     } else {
@@ -61,38 +68,16 @@ export const createPaymentIntent = async (
         console.error('[Stripe] Parse error:', parseError);
       }
     }
-    
+
     throw new Error(errorMessage);
   }
 
-
   const data = await response.json();
-  return data;
-};
-
-export const confirmPaymentWithCard = async (
-  stripe: Stripe,
-  clientSecret: string,
-  email: string,
-  name: string
-): Promise<any> => {
-  const confirmResult = await stripe.confirmCardPayment(clientSecret, {
-    payment_method: {
-      card: {
-        token: 'tok_visa', // Would be replaced with actual card element
-      },
-      billing_details: {
-        email,
-        name,
-      },
-    },
-  });
-
-  return confirmResult;
+  return data as CreatePaymentIntentResponse;
 };
 
 export const handlePaymentIntentResult = (
-  paymentIntent: any
+  paymentIntent: { status: string }
 ): { success: boolean; message?: string } => {
   if (paymentIntent.status === 'succeeded') {
     return {
