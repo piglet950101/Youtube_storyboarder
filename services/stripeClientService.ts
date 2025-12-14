@@ -45,14 +45,26 @@ export const createPaymentIntent = async (
     body: JSON.stringify({ type, ...payload }),
   });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(
-      error.error ||
-        error.message ||
-        `Payment intent creation failed: ${response.statusText}`
-    );
+    if (!response.ok) {
+    let errorMessage = `Payment intent creation failed (${response.status} ${response.statusText})`;
+    
+    if (response.status === 404) {
+      errorMessage = 'Netlify Functions not found. Make sure to run: netlify dev';
+    } else {
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType?.includes('application/json')) {
+          const error = await response.json();
+          errorMessage = error.error || error.message || errorMessage;
+        }
+      } catch (parseError) {
+        console.error('[Stripe] Parse error:', parseError);
+      }
+    }
+    
+    throw new Error(errorMessage);
   }
+
 
   const data = await response.json();
   return data;
