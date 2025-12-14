@@ -12,5 +12,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    // Prevent session refresh on window focus - this causes page reload issues
+    flowType: 'pkce',
+  },
+  // Disable realtime subscriptions that cause reconnection issues
+  realtime: {
+    params: {
+      eventsPerSecond: 1,
+    },
   },
 });
