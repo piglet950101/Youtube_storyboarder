@@ -43,7 +43,7 @@ export const createPaymentIntent = async (
     throw new Error('VITE_API_URL is not configured');
   }
 
-  const response = await fetch(`${apiUrl}/billing/create-payment-intent`, {
+  const response = await fetch(`${apiUrl}/create-payment-intent`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

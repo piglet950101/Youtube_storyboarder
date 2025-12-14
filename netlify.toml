@@ -6,6 +6,12 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# SPA routing - serve index.html for all routes except functions
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -15,13 +21,18 @@
   functions = "netlify/functions"
   port = 3000
 
-[env.production]
-  VITE_SUPABASE_URL = ""
-  VITE_SUPABASE_ANON_KEY = ""
-  VITE_GEMINI_API_KEY = ""
-  VITE_STRIPE_PUBLIC_KEY = ""
-  STRIPE_SECRET_KEY = ""
-  STRIPE_WEBHOOK_SECRET = ""
-  SUPABASE_URL = ""
-  SUPABASE_SERVICE_KEY = ""
-  STRIPE_API_VERSION = "2024-11-20"
+# NOTE: Set these environment variables in Netlify Dashboard for security!
+# Go to: Site settings > Environment variables
+#
+# Required for Frontend:
+#   VITE_SUPABASE_URL        - Your Supabase project URL
+#   VITE_SUPABASE_ANON_KEY   - Supabase anon/public key
+#   VITE_GEMINI_API_KEY      - Google Gemini API key
+#   VITE_STRIPE_PUBLIC_KEY   - Stripe publishable key (pk_live_...)
+#   VITE_API_URL             - https://cinegen-youtubestory.netlify.app/.netlify/functions
+#
+# Required for Netlify Functions:
+#   SUPABASE_URL             - Your Supabase project URL
+#   SUPABASE_SERVICE_KEY     - Supabase service role key (secret!)
+#   STRIPE_SECRET_KEY        - Stripe secret key (sk_live_...)
+#   STRIPE_WEBHOOK_SECRET    - Stripe webhook signing secret (whsec_...)
