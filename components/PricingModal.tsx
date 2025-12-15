@@ -139,13 +139,24 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
         setSuccessMessage(message);
         setPaymentFlow('success');
 
-        // Refresh token balance from server
-        await refreshTokenBalance();
+        // Wait for webhook to process, then refresh user data
+        // Stripe webhooks can take a few seconds to arrive
+        const refreshWithRetry = async (retries = 3, delay = 2000) => {
+          for (let i = 0; i < retries; i++) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+            await refreshTokenBalance();
+            // Check if plan was updated (for plan upgrades)
+            if (pendingPayment.type === 'token_topup') break; // Token topups don't need plan check
+          }
+        };
 
-        // Auto-close after 3 seconds
+        // Start refresh in background
+        refreshWithRetry();
+
+        // Auto-close after 4 seconds (give time for webhook)
         setTimeout(() => {
           onClose();
-        }, 3000);
+        }, 4000);
 
       } else if (paymentIntent?.status === 'requires_action') {
         // 3D Secure or other action required - Stripe handles this automatically
