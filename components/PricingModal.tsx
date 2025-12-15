@@ -204,12 +204,14 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
         <div className="flex-1 overflow-y-auto p-6">
 
-          {/* Card Input Section - Shows when in card-input flow */}
-          {paymentFlow === 'card-input' && pendingPayment && (
+          {/* Card Input Section - Keep mounted during processing to avoid Stripe Element unmount error */}
+          {(paymentFlow === 'card-input' || paymentFlow === 'processing') && pendingPayment && (
             <div className="mb-8 max-w-lg mx-auto bg-zinc-800 rounded-xl p-6 border border-zinc-700">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-white font-semibold">カード情報を入力</h3>
+                  <h3 className="text-white font-semibold">
+                    {paymentFlow === 'processing' ? '決済処理中...' : 'カード情報を入力'}
+                  </h3>
                   <p className="text-zinc-400 text-sm mt-1">
                     {pendingPayment.type === 'plan_upgrade'
                       ? `${pendingPayment.plan === 'pro_premium' ? 'プレミアム' : 'スタンダード'}プラン`
@@ -223,7 +225,7 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              <div className="bg-zinc-900 p-4 rounded-lg mb-4">
+              <div className={`bg-zinc-900 p-4 rounded-lg mb-4 ${paymentFlow === 'processing' ? 'opacity-50' : ''}`}>
                 <CardElement
                   options={{
                     style: {
@@ -240,25 +242,33 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         iconColor: '#ef4444',
                       },
                     },
+                    disabled: paymentFlow === 'processing',
                   }}
                 />
               </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={cancelPayment}
-                  className="flex-1 py-3 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-white font-semibold transition-colors"
-                >
-                  キャンセル
-                </button>
-                <button
-                  onClick={confirmPayment}
-                  className="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-white font-semibold transition-colors flex items-center justify-center gap-2"
-                >
-                  <CreditCard size={16} />
-                  支払い確認
-                </button>
-              </div>
+              {paymentFlow === 'processing' ? (
+                <div className="flex items-center justify-center gap-3 py-3">
+                  <Loader2 size={20} className="animate-spin text-green-500" />
+                  <p className="text-white font-semibold">決済処理中... 画面を閉じないでください</p>
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  <button
+                    onClick={cancelPayment}
+                    className="flex-1 py-3 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-white font-semibold transition-colors"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={confirmPayment}
+                    className="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                  >
+                    <CreditCard size={16} />
+                    支払い確認
+                  </button>
+                </div>
+              )}
 
               <p className="text-xs text-zinc-500 mt-4 text-center">
                 決済はStripeにより安全に処理されます
@@ -272,15 +282,6 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <Loader2 size={48} className="animate-spin text-red-500 mx-auto mb-4" />
               <p className="text-white font-semibold">決済を準備しています...</p>
               <p className="text-zinc-400 text-sm mt-1">しばらくお待ちください</p>
-            </div>
-          )}
-
-          {/* Processing State */}
-          {paymentFlow === 'processing' && (
-            <div className="mb-8 max-w-md mx-auto bg-zinc-800 rounded-xl p-8 border border-zinc-700 text-center">
-              <Loader2 size={48} className="animate-spin text-green-500 mx-auto mb-4" />
-              <p className="text-white font-semibold">決済処理中...</p>
-              <p className="text-zinc-400 text-sm mt-1">画面を閉じないでください</p>
             </div>
           )}
 
