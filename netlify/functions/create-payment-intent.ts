@@ -44,8 +44,9 @@ const PRICING = {
 // Get allowed origin for CORS
 const getAllowedOrigin = (requestOrigin: string | undefined): string => {
   const allowedOrigins = [
-    'https://cinegen-youtubestory.netlify.app',
+    'https://youtubestory.netlify.app',
     'http://localhost:3000',
+    'http://localhost:5173',
     'http://localhost:8888',
   ];
 
@@ -54,7 +55,7 @@ const getAllowedOrigin = (requestOrigin: string | undefined): string => {
   }
 
   // Default to production
-  return 'https://cinegen-youtubestory.netlify.app';
+  return 'https://youtubestory.netlify.app';
 };
 
 export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {

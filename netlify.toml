@@ -29,10 +29,11 @@
 #   VITE_SUPABASE_ANON_KEY   - Supabase anon/public key
 #   VITE_GEMINI_API_KEY      - Google Gemini API key
 #   VITE_STRIPE_PUBLIC_KEY   - Stripe publishable key (pk_live_...)
-#   VITE_API_URL             - https://cinegen-youtubestory.netlify.app/.netlify/functions
+#   VITE_API_URL             - https://youtubestory.netlify.app/.netlify/functions
 #
 # Required for Netlify Functions:
 #   SUPABASE_URL             - Your Supabase project URL
 #   SUPABASE_SERVICE_KEY     - Supabase service role key (secret!)
 #   STRIPE_SECRET_KEY        - Stripe secret key (sk_live_...)
 #   STRIPE_WEBHOOK_SECRET    - Stripe webhook signing secret (whsec_...)
+#   GEMINI_API_KEY           - Google Gemini API key (for serverless functions)
