@@ -159,13 +159,12 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     const newTokenBalance = Math.min(currentTokens, maxTokens);
     const tokenLoss = currentTokens - newTokenBalance;
 
-    // Update user record
+    // Update user record (only update columns that exist)
     const { error: updateError } = await supabase
       .from('users')
       .update({
         plan_tier: targetPlan,
         token_balance: newTokenBalance,
-        plan_cancelled_at: new Date().toISOString(),
       })
       .eq('id', userId);
 
