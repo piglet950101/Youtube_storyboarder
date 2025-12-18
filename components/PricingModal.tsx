@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, CreditCard, Crown, Star, Loader2, Plus, Coins } from 'lucide-react';
+import { Check, X, CreditCard, Crown, Star, Loader2, Plus, Coins, AlertTriangle, ArrowDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { STRIPE_PRICING, FREE_INITIAL_TOKENS, COST_PER_IMAGE } from '../types';
 import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
-import { createPaymentIntent } from '../services/stripeClientService';
+import { createPaymentIntent, cancelPlan } from '../services/stripeClientService';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type PaymentFlow = 'idle' | 'loading' | 'card-input' | 'processing' | 'success' | 'error';
+type PaymentFlow = 'idle' | 'loading' | 'card-input' | 'processing' | 'success' | 'error' | 'confirm-downgrade';
 type PaymentType = 'plan_upgrade' | 'token_topup';
 
 interface PendingPayment {
@@ -31,6 +31,7 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [error, setError] = useState<string | null>(null);
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [pendingDowngrade, setPendingDowngrade] = useState<{ targetPlan: 'free' | 'pro_standard'; tokensLoss: number } | null>(null);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -39,6 +40,7 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
       setError(null);
       setPendingPayment(null);
       setSuccessMessage('');
+      setPendingDowngrade(null);
     }
   }, [isOpen]);
 
@@ -178,6 +180,55 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
     setPaymentFlow('idle');
     setError(null);
     setPendingPayment(null);
+    setPendingDowngrade(null);
+  };
+
+  // Initiate plan downgrade - shows confirmation dialog
+  const initiateDowngrade = (targetPlan: 'free' | 'pro_standard') => {
+    const currentTokens = user?.tokens || 0;
+    const maxTokensAfter = targetPlan === 'free' ? 100 : 10000;
+    const tokensLoss = Math.max(0, currentTokens - maxTokensAfter);
+
+    setPendingDowngrade({ targetPlan, tokensLoss });
+    setPaymentFlow('confirm-downgrade');
+  };
+
+  // Confirm and execute plan downgrade
+  const confirmDowngrade = async () => {
+    if (!session || !pendingDowngrade) {
+      setError('セッションが無効です');
+      setPaymentFlow('error');
+      return;
+    }
+
+    setPaymentFlow('processing');
+    setError(null);
+
+    try {
+      const result = await cancelPlan(pendingDowngrade.targetPlan, session.access_token);
+
+      const planName = pendingDowngrade.targetPlan === 'free' ? 'Free' : 'スタンダード';
+      let message = `${planName}プランに変更しました`;
+      if (result.tokensLost > 0) {
+        message += `\n(${result.tokensLost.toLocaleString()}トークンが上限により削減されました)`;
+      }
+
+      setSuccessMessage(message);
+      setPaymentFlow('success');
+
+      // Refresh user data
+      await refreshTokenBalance();
+
+      // Auto-close after 3 seconds
+      setTimeout(() => {
+        onClose();
+      }, 3000);
+
+    } catch (err: any) {
+      console.error('Downgrade error:', err);
+      setError(err.message || 'プラン変更に失敗しました');
+      setPaymentFlow('error');
+    }
   };
 
   // Calculate top-up tokens based on plan
@@ -315,8 +366,71 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Check size={32} className="text-white" />
               </div>
-              <p className="text-green-300 font-semibold text-lg">{successMessage}</p>
+              <p className="text-green-300 font-semibold text-lg whitespace-pre-line">{successMessage}</p>
               <p className="text-green-300/70 text-sm mt-2">まもなく自動で閉じます...</p>
+            </div>
+          )}
+
+          {/* Downgrade Confirmation Dialog */}
+          {paymentFlow === 'confirm-downgrade' && pendingDowngrade && (
+            <div className="mb-8 max-w-lg mx-auto bg-zinc-800 rounded-xl p-6 border border-orange-600/50">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-orange-600/20 rounded-full">
+                  <AlertTriangle size={24} className="text-orange-500" />
+                </div>
+                <div>
+                  <h3 className="text-white font-bold text-lg">プランのダウングレード</h3>
+                  <p className="text-zinc-400 text-sm">
+                    {pendingDowngrade.targetPlan === 'free' ? 'Freeプラン' : 'スタンダードプラン'}に変更します
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-zinc-900 rounded-lg p-4 mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-zinc-400">現在のプラン</span>
+                  <span className="text-white font-semibold">{isPremium ? 'プレミアム' : 'スタンダード'}</span>
+                </div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-zinc-400">変更後のプラン</span>
+                  <span className="text-orange-400 font-semibold">
+                    {pendingDowngrade.targetPlan === 'free' ? 'Free' : 'スタンダード'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-400">現在のトークン</span>
+                  <span className="text-white font-semibold">{user?.tokens.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {pendingDowngrade.tokensLoss > 0 && (
+                <div className="bg-red-900/20 border border-red-900/50 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-2 text-red-400 mb-2">
+                    <AlertTriangle size={16} />
+                    <span className="font-semibold">注意: トークンが削減されます</span>
+                  </div>
+                  <p className="text-red-300 text-sm">
+                    ダウングレード後のトークン上限({pendingDowngrade.targetPlan === 'free' ? '100' : '10,000'})を超えているため、
+                    <span className="font-bold text-red-400"> {pendingDowngrade.tokensLoss.toLocaleString()} トークン</span>が失われます。
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelPayment}
+                  className="flex-1 py-3 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-white font-semibold transition-colors"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={confirmDowngrade}
+                  className="flex-1 py-3 bg-orange-600 hover:bg-orange-700 rounded-lg text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <ArrowDown size={16} />
+                  ダウングレードする
+                </button>
+              </div>
             </div>
           )}
 
@@ -349,8 +463,20 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     </li>
                   </ul>
 
-                  <div className="mt-auto py-3 text-center text-sm text-zinc-500 bg-zinc-800/50 rounded-lg">
-                    {user?.plan === 'free' || !user?.plan ? '現在のプラン' : 'デフォルト'}
+                  <div className="mt-auto">
+                    {user?.plan === 'free' || !user?.plan ? (
+                      <div className="py-3 text-center text-sm text-zinc-500 bg-zinc-800/50 rounded-lg">
+                        現在のプラン
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => initiateDowngrade('free')}
+                        className="w-full py-3 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-zinc-300 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                      >
+                        <ArrowDown size={14} />
+                        Freeプランに戻る
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -393,9 +519,13 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         現在のプラン
                       </div>
                     ) : isPremium ? (
-                      <div className="w-full py-3 bg-zinc-700 rounded-lg text-center text-sm text-zinc-500">
-                        プレミアムプラン加入中
-                      </div>
+                      <button
+                        onClick={() => initiateDowngrade('pro_standard')}
+                        className="w-full py-3 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-zinc-300 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                      >
+                        <ArrowDown size={14} />
+                        スタンダードに変更
+                      </button>
                     ) : (
                       <button
                         onClick={() => initiatePayment('plan_upgrade', 'pro_standard')}

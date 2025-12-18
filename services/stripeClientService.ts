@@ -101,3 +101,45 @@ export const handlePaymentIntentResult = (
     };
   }
 };
+
+export interface CancelPlanResponse {
+  success: boolean;
+  previousPlan: string;
+  newPlan: string;
+  previousTokens: number;
+  newTokens: number;
+  tokensLost: number;
+  message: string;
+}
+
+export const cancelPlan = async (
+  targetPlan: 'free' | 'pro_standard',
+  sessionToken: string
+): Promise<CancelPlanResponse> => {
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (!apiUrl) {
+    throw new Error('VITE_API_URL is not configured');
+  }
+
+  const response = await fetch(`${apiUrl}/cancel-plan`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${sessionToken}`,
+    },
+    body: JSON.stringify({ targetPlan }),
+  });
+
+  if (!response.ok) {
+    let errorMessage = `Plan cancellation failed (${response.status})`;
+    try {
+      const error = await response.json();
+      errorMessage = error.error || errorMessage;
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(errorMessage);
+  }
+
+  return await response.json();
+};
