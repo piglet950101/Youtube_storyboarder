@@ -64,6 +64,8 @@ export const ImageGenerator: React.FC<Props> = ({
       const deductionResult = await deductTokensForImage(user.uid, COST_PER_IMAGE, scene.id);
       if (deductionResult.success) {
         console.log(`Tokens deducted for scene ${scene.id}: ${deductionResult.balanceBefore} → ${deductionResult.balanceAfter}`);
+        // Update local state to reflect the new balance in UI
+        consumeTokens(COST_PER_IMAGE);
       } else {
         console.error(`Failed to deduct tokens: ${deductionResult.error}`);
       }
