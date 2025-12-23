@@ -14,7 +14,7 @@ interface CancelPlanRequest {
 // Token limits per plan
 const MAX_TOKENS = {
   free: 100,
-  pro_standard: 10000,
+  pro_standard: 30000,
   pro_premium: 60000,
 };
 

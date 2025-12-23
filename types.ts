@@ -55,8 +55,8 @@ export const STRIPE_PRICING = {
     name: 'スタンダード',
     price: 4980,
     currency: 'JPY',
-    initialTokens: 5000,
-    maxTokens: 10000, // Cap
+    initialTokens: 15000,
+    maxTokens: 30000, // Cap
     topUp: {
       price: 1000,
       tokens: 1000,

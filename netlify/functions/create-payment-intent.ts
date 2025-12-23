@@ -23,9 +23,9 @@ interface CreatePaymentIntentRequest {
 // NOTE: JPY is a zero-decimal currency, so amounts are in yen (not sen)
 const PRICING = {
   pro_standard: {
-    tokens: 5000,
+    tokens: 15000,
     amount: 4980, // ¥4,980
-    maxBalance: 10000,
+    maxBalance: 30000,
   },
   pro_premium: {
     tokens: 30000,
