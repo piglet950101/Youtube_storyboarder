@@ -23,9 +23,9 @@ interface CreatePaymentIntentRequest {
 // NOTE: JPY is a zero-decimal currency, so amounts are in yen (not sen)
 const PRICING = {
   pro_standard: {
-    tokens: 15000,
+    tokens: 5000,
     amount: 4980, // ¥4,980
-    maxBalance: 30000,
+    maxBalance: 10000,
   },
   pro_premium: {
     tokens: 30000,
@@ -33,11 +33,16 @@ const PRICING = {
     maxBalance: 60000,
   },
   token_topup: {
-    // Base rate: 1,000 tokens for ¥1,000
-    // Premium rate: 3,000 tokens for ¥1,000
-    base_tokens_per_1000_yen: 1000,
-    premium_tokens_per_1000_yen: 3000,
-    amount: 1000, // ¥1,000 per top-up unit
+    // Standard rate: 1,000 tokens for ¥1,000
+    // Premium rate: 15,000 tokens for ¥5,000
+    standard: {
+      tokens: 1000,
+      amount: 1000,
+    },
+    premium: {
+      tokens: 15000,
+      amount: 5000,
+    },
   },
 };
 
@@ -248,16 +253,13 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         };
       }
 
-      // Calculate tokens based on plan tier
+      // Get pricing based on plan tier
       const isPremium = userRecord.plan_tier === 'pro_premium';
-      const tokensPerUnit = isPremium
-        ? PRICING.token_topup.premium_tokens_per_1000_yen
-        : PRICING.token_topup.base_tokens_per_1000_yen;
+      const topUpPricing = isPremium ? PRICING.token_topup.premium : PRICING.token_topup.standard;
 
-      // Allow custom token amounts (default to 1 unit)
-      const units = body.tokensAmount ? Math.ceil(body.tokensAmount / tokensPerUnit) : 1;
-      amount = PRICING.token_topup.amount * units;
-      tokensToGrant = tokensPerUnit * units;
+      // Fixed top-up amount per plan (no custom amounts)
+      amount = topUpPricing.amount;
+      tokensToGrant = topUpPricing.tokens;
 
       // Check max balance limit
       const maxBalance = isPremium ? PRICING.pro_premium.maxBalance : PRICING.pro_standard.maxBalance;

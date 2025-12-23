@@ -16,8 +16,8 @@ const supabase = createClient(
 // Token pricing configuration (must match create-payment-intent.ts)
 const PRICING = {
   pro_standard: {
-    tokens: 15000,
-    maxBalance: 30000,
+    tokens: 5000,
+    maxBalance: 10000,
   },
   pro_premium: {
     tokens: 30000,
@@ -27,7 +27,7 @@ const PRICING = {
 
 const MAX_TOKENS = {
   free: 100,
-  pro_standard: 30000,
+  pro_standard: 10000,
   pro_premium: 60000,
 };
 

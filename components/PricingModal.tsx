@@ -231,13 +231,13 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
     }
   };
 
-  // Calculate top-up tokens based on plan
+  // Calculate top-up tokens and price based on plan
   const getTopUpTokens = () => {
-    return isPremium ? 3000 : 1000;
+    return isPremium ? STRIPE_PRICING.premium.topUp.tokens : STRIPE_PRICING.standard.topUp.tokens;
   };
 
   const getTopUpPrice = () => {
-    return 1000; // ¥1,000 per unit
+    return isPremium ? STRIPE_PRICING.premium.topUp.price : STRIPE_PRICING.standard.topUp.price;
   };
 
   return (
@@ -604,7 +604,9 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     <div>
                       <h3 className="text-lg font-bold text-white">トークン追加購入</h3>
                       <p className="text-sm text-zinc-400">
-                        {isPremium ? 'プレミアム価格: 3,000トークン/¥1,000' : 'スタンダード価格: 1,000トークン/¥1,000'}
+                        {isPremium
+                          ? `プレミアム価格: ${STRIPE_PRICING.premium.topUp.tokens.toLocaleString()}トークン/¥${STRIPE_PRICING.premium.topUp.price.toLocaleString()}`
+                          : `スタンダード価格: ${STRIPE_PRICING.standard.topUp.tokens.toLocaleString()}トークン/¥${STRIPE_PRICING.standard.topUp.price.toLocaleString()}`}
                       </p>
                     </div>
                   </div>
@@ -615,7 +617,7 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         +{getTopUpTokens().toLocaleString()} トークン
                       </p>
                       <p className="text-zinc-500 text-xs">
-                        現在の残高: {user?.tokens.toLocaleString()} / {isPremium ? '60,000' : '10,000'}
+                        現在の残高: {user?.tokens.toLocaleString()} / {isPremium ? STRIPE_PRICING.premium.maxTokens.toLocaleString() : STRIPE_PRICING.standard.maxTokens.toLocaleString()}
                       </p>
                     </div>
                     <button
