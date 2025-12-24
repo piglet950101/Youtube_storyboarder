@@ -23,25 +23,25 @@ interface CreatePaymentIntentRequest {
 // NOTE: JPY is a zero-decimal currency, so amounts are in yen (not sen)
 const PRICING = {
   pro_standard: {
-    tokens: 5000,
-    amount: 4980, // ¥4,980
+    tokens: 1000,
+    amount: 9800, // ¥9,800
     maxBalance: 10000,
   },
   pro_premium: {
-    tokens: 30000,
-    amount: 9800, // ¥9,800
+    tokens: 5000,
+    amount: 29800, // ¥29,800
     maxBalance: 60000,
   },
   token_topup: {
-    // Standard rate: 1,000 tokens for ¥1,000
-    // Premium rate: 15,000 tokens for ¥5,000
+    // Standard rate: 1,000 tokens for ¥9,800
+    // Premium rate: 5,000 tokens for ¥29,800
     standard: {
       tokens: 1000,
-      amount: 1000,
+      amount: 9800,
     },
     premium: {
-      tokens: 15000,
-      amount: 5000,
+      tokens: 5000,
+      amount: 29800,
     },
   },
 };
