@@ -96,58 +96,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const { data, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError) throw sessionError;
-
-        if (data.session) {
-          setSession(data.session);
-          await loadUserProfile(data.session.user.id);
-        }
-      } catch (err) {
-        console.error('Auth init error:', err);
-        setError(err instanceof Error ? err.message : 'Auth initialization failed');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initAuth();
+    // Guard flag to prevent double profile loading.
+    // Supabase fires INITIAL_SESSION + SIGNED_IN back-to-back on app load;
+    // without this guard, loadUserProfile runs twice causing dual setUser()
+    // calls that crash React DOM reconciliation (removeChild/insertBefore).
+    let profileLoadStarted = false;
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, newSession) => {
       console.log('[Auth] Auth state changed:', event);
 
-      // Ignore token refresh events - these happen on window focus and cause reload
+      // Token refresh: silently update session for API calls, no re-render cascade
       if (event === 'TOKEN_REFRESHED') {
-        if (newSession) {
+        if (newSession) setSession(newSession);
+        return;
+      }
+
+      // Initial load or sign-in: load profile exactly once
+      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && newSession) {
+        if (!profileLoadStarted) {
+          profileLoadStarted = true;
           setSession(newSession);
+          setLoading(true);
+          try {
+            await loadUserProfile(newSession.user.id);
+          } finally {
+            setLoading(false);
+          }
         }
         return;
       }
 
-      // Handle actual sign-in
-      if (event === 'SIGNED_IN' && newSession) {
-        // Only update session and load profile if we don't have user data yet.
-        // Supabase fires multiple SIGNED_IN events (window focus, token refresh)
-        // and calling setSession each time causes unnecessary re-renders that
-        // can crash React DOM reconciliation (insertBefore error).
-        setUser((currentUser) => {
-          if (!currentUser) {
-            setSession(newSession);
-            setLoading(true);
-            loadUserProfile(newSession.user.id).finally(() => setLoading(false));
-          }
-          return currentUser;
-        });
+      // No session on initial load = user not logged in
+      if (event === 'INITIAL_SESSION' && !newSession) {
+        setLoading(false);
         return;
       }
 
-      // Handle sign-out
+      // Sign-out: reset everything
       if (event === 'SIGNED_OUT') {
+        profileLoadStarted = false;
         setSession(null);
         setUser(null);
         setLoading(false);
