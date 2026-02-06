@@ -1,26 +1,29 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Scene, Character, COST_PER_IMAGE } from '../types';
+import { Scene, Character, COST_PER_IMAGE, ImageStyle } from '../types';
 import { generateSceneImage } from '../services/geminiService';
 import { useAuth } from '../contexts/AuthContext';
 import { validateTokensForGeneration, deductTokensForImage } from '../services/imageGenerationService';
 import { Play, RefreshCw, Download, Edit2, X, Check, Square, Package, Lock, AlertCircle } from 'lucide-react';
+import { getSceneFileName } from '../utils/fileHelpers';
 import JSZip from 'jszip';
 
 interface Props {
   scenes: Scene[];
   characters: Character[];
+  imageStyle: ImageStyle;
   onUpdateScene: (id: number, updates: Partial<Scene>) => void;
   autoStart?: boolean;
   scenarioTitle: string;
   onOpenPricing: () => void;
 }
 
-export const ImageGenerator: React.FC<Props> = ({ 
-  scenes, 
-  characters, 
-  onUpdateScene, 
-  autoStart = false, 
+export const ImageGenerator: React.FC<Props> = ({
+  scenes,
+  characters,
+  imageStyle,
+  onUpdateScene,
+  autoStart = false,
   scenarioTitle,
   onOpenPricing
 }) => {
@@ -59,7 +62,7 @@ export const ImageGenerator: React.FC<Props> = ({
     if (editingSceneId === scene.id) setEditingSceneId(null);
 
     try {
-      const base64 = await generateSceneImage(scene, characters);
+      const base64 = await generateSceneImage(scene, characters, imageStyle);
       
       const deductionResult = await deductTokensForImage(user.uid, COST_PER_IMAGE, scene.id);
       if (deductionResult.success) {
@@ -120,25 +123,6 @@ export const ImageGenerator: React.FC<Props> = ({
     setIsBatchGenerating(false); // UI update immediately
   };
 
-  // Helpers
-  const getFileName = (scene: Scene) => {
-    // 1. Use originalScriptExcerpt if available (Priority), otherwise fallback to description
-    const baseText = scene.originalScriptExcerpt || scene.description || "";
-
-    // 2. Clean unsafe chars but keep it readable
-    const clean = baseText.replace(/[\r\n\t]/g, "").replace(/[\\/:*?"<>|]/g, "").trim();
-    
-    // 3. First 20 chars (excerpt should be short ~10, but allow a bit more)
-    const textPart = clean.substring(0, 20);
-    const finalName = textPart.length > 0 ? textPart : "scene";
-    
-    // 4. ID with 3-digit padding (001, 002...)
-    const paddedId = String(scene.id).padStart(3, '0');
-    
-    // Format: 001_SceneExcerpt.png
-    return `${paddedId}_${finalName}.png`;
-  };
-
   // Download All as ZIP
   const handleDownloadZip = async () => {
     const zip = new JSZip();
@@ -149,7 +133,7 @@ export const ImageGenerator: React.FC<Props> = ({
 
     scenes.forEach(scene => {
       if (scene.generatedImage) {
-        const filename = getFileName(scene);
+        const filename = getSceneFileName(scene);
         folder?.file(filename, scene.generatedImage, { base64: true });
         count++;
       }
@@ -186,7 +170,7 @@ export const ImageGenerator: React.FC<Props> = ({
 
   return (
     <div className="max-w-[1600px] mx-auto mt-10 px-4 pb-20 relative">
-      <div className="flex justify-between items-center mb-6 sticky top-24 z-10 bg-[#0f0f0f] py-4 border-b border-zinc-800">
+      <div className="flex justify-between items-center mb-6 sticky top-16 z-30 bg-[#0f0f0f] py-4 border-b border-zinc-800">
         <div>
           <h2 className="text-2xl font-bold text-white">Step 4: 画像制作 (Production)</h2>
           <p className="text-zinc-400">
@@ -229,7 +213,7 @@ export const ImageGenerator: React.FC<Props> = ({
           const isEditing = editingSceneId === scene.id;
 
           return (
-            <div key={scene.id} className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex flex-col relative group">
+            <div key={scene.instanceId || `scene_${scene.id}`} className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex flex-col relative group">
               
               {/* Main Visual Area */}
               <div className="relative w-full pt-[56.25%] bg-black">
@@ -290,7 +274,7 @@ export const ImageGenerator: React.FC<Props> = ({
                           <RefreshCw size={20} />
                         </button>
                         {scene.generatedImage && (
-                          <a href={`data:image/png;base64,${scene.generatedImage}`} download={getFileName(scene)} className="p-3 bg-white text-black rounded-full hover:bg-zinc-200 hover:scale-110 transition-all" title="保存">
+                          <a href={`data:image/png;base64,${scene.generatedImage}`} download={getSceneFileName(scene)} className="p-3 bg-white text-black rounded-full hover:bg-zinc-200 hover:scale-110 transition-all" title="保存">
                             <Download size={20} />
                           </a>
                         )}

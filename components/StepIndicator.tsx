@@ -17,7 +17,7 @@ const steps = [
 
 export const StepIndicator: React.FC<Props> = ({ currentStep, onHome, onBack }) => {
   return (
-    <div className="w-full bg-zinc-900 border-b border-zinc-800 py-4 sticky top-0 z-20 shadow-md">
+    <div className="w-full bg-zinc-900 border-b border-zinc-800 py-4 sticky top-16 z-20 shadow-md">
       <div className="max-w-6xl mx-auto px-4 flex items-center gap-6">
         
         {/* Navigation Buttons */}

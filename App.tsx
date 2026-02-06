@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
-import { AppStep, Character, Scene } from './types';
+import { Routes, Route } from 'react-router-dom';
+import { AppStep, Character, Scene, ImageStyle, ActiveTab } from './types';
 import { StepIndicator } from './components/StepIndicator';
 import { ScenarioInput } from './components/ScenarioInput';
 import { CharacterManager } from './components/CharacterManager';
@@ -9,13 +9,15 @@ import { ImageGenerator } from './components/ImageGenerator';
 import { LoginScreen } from './components/LoginScreen';
 import { AuthCallback } from './pages/AuthCallback';
 import { PricingModal } from './components/PricingModal';
+import { Header } from './components/Header';
+import { ReplicatorView } from './components/replicator/ReplicatorView';
 import { useAuth } from './contexts/AuthContext';
-import { analyzeCharactersFromScript, generateStoryboardScenes, generateCharacterReference } from './services/geminiService';
-import { Loader2, Sparkles, Film, Zap, User as UserIcon, LogOut, CreditCard } from 'lucide-react';
+import { analyzeCharactersFromScript, generateStoryboardScenes, generateCharacterReference, generateSingleSceneFromSnippet } from './services/geminiService';
+import { Loader2, Sparkles, Film, Zap } from 'lucide-react';
 
 // Loading Overlay Component
-const LoadingOverlay: React.FC<{ message: string; subMessage: string; icon?: React.ElementType }> = ({ 
-  message, 
+const LoadingOverlay: React.FC<{ message: string; subMessage: string; icon?: React.ElementType }> = ({
+  message,
   subMessage,
   icon: Icon = Sparkles
 }) => (
@@ -42,17 +44,18 @@ const LoadingOverlay: React.FC<{ message: string; subMessage: string; icon?: Rea
 );
 
 const AppContent: React.FC = () => {
-  const { user, logout, loading } = useAuth();
-  const location = useLocation();
+  const { user, loading } = useAuth();
   const [currentStep, setCurrentStep] = useState<AppStep>(AppStep.SCENARIO_INPUT);
   const [scenario, setScenario] = useState("");
   const [sceneCount, setSceneCount] = useState<number>(20);
+  const [imageStyle, setImageStyle] = useState<ImageStyle>('realistic');
   const [isAutoMode, setIsAutoMode] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
+  const [activeTab, setActiveTab] = useState<ActiveTab>('storyboarder');
 
   const [characters, setCharacters] = useState<Character[]>([]);
   const [scenes, setScenes] = useState<Scene[]>([]);
-  
+
   // Loading states
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isGeneratingStoryboard, setIsGeneratingStoryboard] = useState(false);
@@ -74,6 +77,16 @@ const AppContent: React.FC = () => {
     return <LoginScreen />;
   }
 
+  // ---- [SCENE] Tag Parsing ----
+  const calculateEffectiveSceneCount = (): number => {
+    const hasTags = scenario.includes("[SCENE]") || scenario.includes("[S]");
+    if (hasTags) {
+      const parts = scenario.split(/\[SCENE\]|\[S\]/g).map(s => s.trim()).filter(s => s.length > 0);
+      return parts.length;
+    }
+    return sceneCount;
+  };
+
   // ---- Navigation ----
   const handleHome = () => {
     if (window.confirm("ホームに戻りますか？現在の入力内容は失われる可能性があります。")) {
@@ -90,18 +103,18 @@ const AppContent: React.FC = () => {
   };
 
   // ---- Helpers ----
-  const generateImagesForAllCharacters = async (chars: Character[]) => {
+  const generateImagesForAllCharacters = async (chars: Character[], style: ImageStyle = 'realistic') => {
     const updatedChars = [...chars];
-    const CHUNK_SIZE = 3; 
+    const CHUNK_SIZE = 3;
     for (let i = 0; i < updatedChars.length; i+=CHUNK_SIZE) {
         const chunk = updatedChars.slice(i, i+CHUNK_SIZE);
         await Promise.all(chunk.map(async (char, idx) => {
             const realIdx = i + idx;
             if (!char.referenceImage) {
                 try {
-                    const base64 = await generateCharacterReference(char);
+                    const base64 = await generateCharacterReference(char, style);
                     updatedChars[realIdx] = { ...char, referenceImage: base64 };
-                    setCharacters([...updatedChars]); 
+                    setCharacters([...updatedChars]);
                 } catch (e) {
                     console.error(`Failed to generate image for ${char.name}`, e);
                 }
@@ -116,31 +129,33 @@ const AppContent: React.FC = () => {
   const handleAnalyzeScenario = async () => {
     if (!scenario.trim()) return;
     setIsAnalyzing(true);
-    
+
     try {
       setLoadingMessage("シナリオ分析中...");
-      const initialChars = await analyzeCharactersFromScript(scenario);
-      
+      const initialChars = await analyzeCharactersFromScript(scenario, imageStyle);
+
       if (initialChars.length === 0) {
         alert("キャラクターを抽出できませんでした。シナリオを詳しく記述してください。");
         setIsAnalyzing(false);
         return;
       }
-      
+
       setCharacters(initialChars);
+
+      const effectiveCount = calculateEffectiveSceneCount();
 
       if (isAutoMode) {
         setLoadingMessage("キャラクター画像を自動生成中...");
-        const charsWithImages = await generateImagesForAllCharacters(initialChars);
-        
+        const charsWithImages = await generateImagesForAllCharacters(initialChars, imageStyle);
+
         setLoadingMessage("絵コンテを一括生成中...");
         setIsGeneratingStoryboard(true);
-        setGenerationProgress({ current: 0, total: sceneCount });
-        
+        setGenerationProgress({ current: 0, total: effectiveCount });
+
         const generatedScenes = await generateStoryboardScenes(
-            scenario, 
-            charsWithImages, 
-            sceneCount,
+            scenario,
+            charsWithImages,
+            effectiveCount,
             (c, t) => setGenerationProgress({ current: c, total: t })
         );
         setScenes(generatedScenes);
@@ -149,7 +164,7 @@ const AppContent: React.FC = () => {
         setCurrentStep(AppStep.IMAGE_PRODUCTION);
 
       } else {
-        generateImagesForAllCharacters(initialChars); 
+        generateImagesForAllCharacters(initialChars, imageStyle);
         setCurrentStep(AppStep.CHARACTER_ANALYSIS);
       }
 
@@ -167,19 +182,20 @@ const AppContent: React.FC = () => {
       alert("キャラクターが登録されていません。");
       return;
     }
+    const effectiveCount = calculateEffectiveSceneCount();
     setIsGeneratingStoryboard(true);
-    setGenerationProgress({ current: 0, total: sceneCount });
-    
+    setGenerationProgress({ current: 0, total: effectiveCount });
+
     try {
       const generatedScenes = await generateStoryboardScenes(
-        scenario, 
-        characters, 
-        sceneCount,
+        scenario,
+        characters,
+        effectiveCount,
         (current, total) => {
           setGenerationProgress({ current, total });
         }
       );
-      
+
       if (!generatedScenes || generatedScenes.length === 0) {
         throw new Error("生成されたシーンが0件でした。");
       }
@@ -199,6 +215,19 @@ const AppContent: React.FC = () => {
     setCurrentStep(AppStep.IMAGE_PRODUCTION);
   };
 
+  const handleAddSceneFromSnippet = async (text: string) => {
+    const newSceneData = await generateSingleSceneFromSnippet(text, characters);
+    setScenes(prev => {
+      const next = [...prev, {
+        ...newSceneData,
+        id: 0,
+        instanceId: `manual_${Date.now()}`,
+      }];
+      // Re-number all scene IDs sequentially
+      return next.map((s, i) => ({ ...s, id: i + 1 }));
+    });
+  };
+
   const updateCharacter = (id: string, updates: Partial<Character>) => {
     setCharacters(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
   };
@@ -209,120 +238,97 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white font-sans relative">
-      
-      {/* Header/User Bar */}
-      <div className="absolute top-0 right-0 p-4 z-50 flex items-center gap-4">
-        <div 
-          onClick={() => setShowPricing(true)}
-          className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-full cursor-pointer transition-colors border border-zinc-700"
-        >
-          {user.plan === 'pro_standard' || user.plan === 'pro_premium' ? (
-             <>
-               <Zap size={14} className="fill-yellow-400 text-yellow-400" />
-               <span className="text-xs font-bold">{user.tokens.toLocaleString()} t</span>
-             </>
-          ) : (
-             <span className="text-xs text-zinc-400">Free Plan</span>
-          )}
-        </div>
-        <div className="group relative">
-           {user.photoURL ? (
-              <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-zinc-700 cursor-pointer" />
-            ) : (
-              <div className="w-8 h-8 rounded-full border border-zinc-700 bg-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-400 cursor-pointer">
-                {user.displayName.charAt(0).toUpperCase()}
-              </div>
-            )}
 
-           {/* Dropdown menu with invisible bridge to prevent hover gap issue */}
-           <div className="absolute right-0 top-full pt-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity z-50">
-              <div className="w-48 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl">
-                <div className="p-3 border-b border-zinc-800">
-                  <p className="text-sm font-bold truncate">{user.displayName}</p>
-                  <p className="text-xs text-zinc-500 truncate">{user.email}</p>
-                </div>
-                <button onClick={() => setShowPricing(true)} className="w-full text-left p-3 text-sm hover:bg-zinc-800 flex items-center gap-2">
-                   <CreditCard size={14} /> プラン変更・購入
-                </button>
-                <button onClick={logout} className="w-full text-left p-3 text-sm hover:bg-zinc-800 text-red-500 flex items-center gap-2 rounded-b-lg">
-                   <LogOut size={14} /> ログアウト
-                </button>
-              </div>
-           </div>
-        </div>
-      </div>
+      <Header
+        onOpenPricing={() => setShowPricing(true)}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
       <PricingModal isOpen={showPricing} onClose={() => setShowPricing(false)} />
 
       {/* Loading Overlays */}
       {isAnalyzing && (
-        <LoadingOverlay 
+        <LoadingOverlay
           message={loadingMessage || "処理中..."}
           subMessage={isAutoMode ? "自動モード実行中: 全工程を一括処理しています" : "AIがシナリオを解析しています"}
           icon={isAutoMode ? Zap : Sparkles}
         />
       )}
-      
+
       {isGeneratingStoryboard && !isAnalyzing && (
-        <LoadingOverlay 
+        <LoadingOverlay
           message={`絵コンテを作成中...`}
-          subMessage={generationProgress 
-            ? `${generationProgress.current} / ${generationProgress.total} シーン生成完了 (バッチ処理中)` 
+          subMessage={generationProgress
+            ? `${generationProgress.current} / ${generationProgress.total} シーン生成完了 (バッチ処理中)`
             : "詳細なシーン構成、演出、照明計画を生成しています"}
           icon={Film}
         />
       )}
 
-      <StepIndicator 
-        currentStep={currentStep} 
-        onHome={handleHome}
-        onBack={handleBack}
-      />
-
-      <main>
-        {currentStep === AppStep.SCENARIO_INPUT && (
-          <ScenarioInput 
-            value={scenario} 
-            onChange={setScenario} 
-            sceneCount={sceneCount}
-            onSceneCountChange={setSceneCount}
-            isAutoMode={isAutoMode}
-            onAutoModeChange={setIsAutoMode}
-            onNext={handleAnalyzeScenario}
-            isAnalyzing={isAnalyzing}
-            onOpenPricing={() => setShowPricing(true)}
+      {activeTab === 'storyboarder' ? (
+        <>
+          <StepIndicator
+            currentStep={currentStep}
+            onHome={handleHome}
+            onBack={handleBack}
           />
-        )}
 
-        {currentStep === AppStep.CHARACTER_ANALYSIS && (
-          <CharacterManager 
-            characters={characters}
-            onUpdateCharacter={updateCharacter}
-            onNext={handleCreateStoryboard}
-            isGeneratingStoryboard={isGeneratingStoryboard}
-          />
-        )}
+          <main>
+            {currentStep === AppStep.SCENARIO_INPUT && (
+              <ScenarioInput
+                value={scenario}
+                onChange={setScenario}
+                sceneCount={sceneCount}
+                onSceneCountChange={setSceneCount}
+                imageStyle={imageStyle}
+                onImageStyleChange={setImageStyle}
+                isAutoMode={isAutoMode}
+                onAutoModeChange={setIsAutoMode}
+                onNext={handleAnalyzeScenario}
+                isAnalyzing={isAnalyzing}
+                onOpenPricing={() => setShowPricing(true)}
+              />
+            )}
 
-        {currentStep === AppStep.STORYBOARD_GENERATION && (
-          <StoryboardEditor 
-            scenes={scenes}
-            characters={characters}
-            onUpdateScene={updateScene}
-            onNext={handleGoToProduction}
-          />
-        )}
+            {currentStep === AppStep.CHARACTER_ANALYSIS && (
+              <CharacterManager
+                characters={characters}
+                imageStyle={imageStyle}
+                onUpdateCharacter={updateCharacter}
+                onNext={handleCreateStoryboard}
+                isGeneratingStoryboard={isGeneratingStoryboard}
+              />
+            )}
 
-        {currentStep === AppStep.IMAGE_PRODUCTION && (
-          <ImageGenerator 
-            scenes={scenes}
-            characters={characters}
-            onUpdateScene={updateScene}
-            autoStart={isAutoMode}
-            scenarioTitle={scenario.replace(/[\\/:*?"<>|\s]/g, "").substring(0, 10)}
-            onOpenPricing={() => setShowPricing(true)}
-          />
-        )}
-      </main>
+            {currentStep === AppStep.STORYBOARD_GENERATION && (
+              <StoryboardEditor
+                scenes={scenes}
+                characters={characters}
+                onUpdateScene={updateScene}
+                onAddScene={handleAddSceneFromSnippet}
+                onNext={handleGoToProduction}
+              />
+            )}
+
+            {currentStep === AppStep.IMAGE_PRODUCTION && (
+              <ImageGenerator
+                scenes={scenes}
+                characters={characters}
+                imageStyle={imageStyle}
+                onUpdateScene={updateScene}
+                autoStart={isAutoMode}
+                scenarioTitle={scenario.replace(/[\\/:*?"<>|\s]/g, "").substring(0, 10)}
+                onOpenPricing={() => setShowPricing(true)}
+              />
+            )}
+          </main>
+        </>
+      ) : (
+        <main className="pt-8">
+          <ReplicatorView onOpenPricing={() => setShowPricing(true)} />
+        </main>
+      )}
     </div>
   );
 };

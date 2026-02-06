@@ -8,6 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+new_update_sos
+new_update_sos_replicator
 guides
 dist
 dist-ssr

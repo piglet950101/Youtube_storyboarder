@@ -1,23 +1,32 @@
 import React, { useState } from 'react';
-import { Character } from '../types';
+import { Character, ImageStyle } from '../types';
 import { generateCharacterReference } from '../services/geminiService';
 import { RefreshCw, ArrowRight } from 'lucide-react';
 
+const STYLE_LABELS: Record<ImageStyle, string> = {
+  realistic: 'リアル',
+  ghibli: 'ジブリ風',
+  anime: 'アニメ風',
+  anime_moe: '萌えアニメ',
+  ukiyo_e: '浮世絵風',
+  pixar: 'ピクサー風',
+};
+
 interface Props {
   characters: Character[];
+  imageStyle: ImageStyle;
   onUpdateCharacter: (id: string, updates: Partial<Character>) => void;
   onNext: () => void;
   isGeneratingStoryboard: boolean;
-  // Allow parent to trigger or control loading if needed, but we keep local for manual retry
 }
 
-export const CharacterManager: React.FC<Props> = ({ characters, onUpdateCharacter, onNext, isGeneratingStoryboard }) => {
+export const CharacterManager: React.FC<Props> = ({ characters, imageStyle, onUpdateCharacter, onNext, isGeneratingStoryboard }) => {
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>({});
 
   const handleGenerateImage = async (char: Character) => {
     setLoadingImages(prev => ({ ...prev, [char.id]: true }));
     try {
-      const base64 = await generateCharacterReference(char);
+      const base64 = await generateCharacterReference(char, imageStyle);
       onUpdateCharacter(char.id, { referenceImage: base64 });
     } catch (error) {
       console.error("Failed to generate image", error);
@@ -32,7 +41,7 @@ export const CharacterManager: React.FC<Props> = ({ characters, onUpdateCharacte
       <div className="flex justify-between items-end mb-6">
         <div>
           <h2 className="text-2xl font-bold text-white">Step 2: キャラクター設定</h2>
-          <p className="text-zinc-400">AIが抽出した登場人物を確認してください。画像は自動生成されますが、必要に応じて再生成できます。</p>
+          <p className="text-zinc-400">AIが抽出した登場人物を確認してください。現在の画風は「<span className="text-red-400 font-bold">{STYLE_LABELS[imageStyle]}</span>」です。</p>
         </div>
       </div>
 

@@ -1,3 +1,5 @@
+export type ImageStyle = 'realistic' | 'ghibli' | 'anime' | 'anime_moe' | 'ukiyo_e' | 'pixar';
+export type ActiveTab = 'storyboarder' | 'replicator';
 
 export interface Character {
   id: string;
@@ -10,6 +12,7 @@ export interface Character {
 
 export interface Scene {
   id: number;
+  instanceId: string; // Client-side unique key for React rendering
   description: string; // General description
   subjectAndComposition: string; // Who/What + Shot Size + Angle
   setting: string; // Location + Time/Weather
@@ -78,3 +81,30 @@ export const STRIPE_PRICING = {
 
 export const FREE_INITIAL_TOKENS = 100;
 export const COST_PER_IMAGE = 5;
+
+// ---- Replicator Types ----
+export interface ThumbnailData {
+  quality: string;
+  url: string;
+  label: string;
+  width: number;
+  height: number;
+}
+
+export interface VideoInfo {
+  id: string;
+  thumbnails: ThumbnailData[];
+}
+
+export interface GeneratedImage {
+  url: string;
+  prompt: string;
+}
+
+export interface ImageAnalysisData {
+  character: string;
+  composition: string;
+  background: string;
+  lighting: string;
+  style: string;
+}

@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, Schema, GenerateContentResponse } from "@google/genai";
-import { Character, Scene, MODEL_TEXT_FAST, MODEL_TEXT_SMART, MODEL_IMAGE } from "../types";
+import { Character, Scene, MODEL_TEXT_FAST, MODEL_TEXT_SMART, MODEL_IMAGE, ImageStyle } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -48,9 +48,32 @@ const cleanJson = (text: string | undefined): string => {
 };
 
 /**
+ * Returns a style-specific prompt for image generation.
+ */
+export const getStylePrompt = (style: ImageStyle): string => {
+  const universalTraits = "Masterpiece, ultra-detailed, cinematic composition, professional lighting. ";
+  switch (style) {
+    case 'ghibli':
+      return `Style: Iconic Studio Ghibli animation. Traditional hand-painted watercolor textures, lush hand-drawn backgrounds. Character: Distinctive and expressive facial features, exaggerated and soulful eyes, simple but iconic clothing. ${universalTraits}`;
+    case 'anime_moe':
+      return `Style: Modern Moe anime. Vibrant large eyes with complex iris patterns, soft digital coloring, high-end production. ${universalTraits}`;
+    case 'anime':
+      return `Style: High-quality Japanese TV anime. Sharp lineart, dynamic cel-shading, detailed urban environments. ${universalTraits}`;
+    case 'ukiyo_e':
+      return `Style: Traditional Japanese Ukiyo-e woodblock print. Bold sumi-e outlines, flat vibrant mineral pigments, dynamic compositions.`;
+    case 'pixar':
+      return `Style: High-end 3D CG film (Pixar/Disney style). Appealing exaggerated proportions, distinct character silhouettes, expressive micro-expressions, professional PBR rendering and textures. ${universalTraits}`;
+    default:
+      return `Style: Professional RAW photo, high-end DSLR photography, 8k UHD. Photorealistic, cinematic lighting, sharp focus on subject, natural skin textures with pores, individual hair strands visible, realistic clothing fabric details.
+        STRICTLY NO ANIME, NO DRAWING, NO ILLUSTRATION, NO 2D ARTWORK, NO CARTOON.
+        SUBJECT: Authentic Japanese people with realistic East Asian facial features, natural facial structure, organic proportions, realistic clothing materials.`;
+  }
+};
+
+/**
  * Analyzes the scenario and extracts character profiles.
  */
-export const analyzeCharactersFromScript = async (scenario: string): Promise<Character[]> => {
+export const analyzeCharactersFromScript = async (scenario: string, style: ImageStyle = 'realistic'): Promise<Character[]> => {
   const schema: Schema = {
     type: Type.ARRAY,
     items: {
@@ -58,25 +81,34 @@ export const analyzeCharactersFromScript = async (scenario: string): Promise<Cha
       properties: {
         name: { type: Type.STRING },
         role: { type: Type.STRING },
-        visualDescription: { type: Type.STRING, description: "画像生成プロンプト用の詳細な外見的特徴（髪型、目、服装、年齢、体格など）。フォトリアルな日本人スタイル。" },
+        visualDescription: { type: Type.STRING, description: "画像生成で一貫性を保つための身体的・視覚的特徴。性格や役割を誇張して外見に反映させること。" },
         personality: { type: Type.STRING },
       },
       required: ["name", "role", "visualDescription", "personality"],
     },
   };
 
+  const isExaggeratedStyle = style === 'ghibli' || style === 'pixar';
+  const exaggerationInstruction = isExaggeratedStyle
+    ? `【キャラクターデザインの誇張】選択されたスタイル「${style}」に合わせて、キャラクターの性格を『外見的特徴』に強く反映させてください。
+       - 例：狡猾なら尖った鼻や細い目、勇気があるならキラキラした大きな瞳と力強い眉、内気なら目が隠れる髪型や小さな口。
+       - そのキャラクターを象徴するシルエットや、性格を表現する特徴的なアイテム、表情のクセも記述に含めてください。`
+    : "【リアル指向】フォトリアルな実写写真として描写するため、デフォルメを一切排除し、現実の日本人としての具体的な身体的特徴（骨格、肌質、髪の質感）を記述してください。";
+
   const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
     model: MODEL_TEXT_FAST,
-    contents: `あなたはプロの映画監督アシスタントです。以下のYouTube動画シナリオを分析してください。
-    主な登場人物を抽出してください。
-    「visualDescription」は、一貫性のあるフォトリアルな日本人キャラクター画像を生成するために、非常に詳細な外見的特徴（髪型、髪の色、目の色、服装、年齢、体格など）を日本語で記述してください。
-    
+    contents: `プロのキャラクターデザイナーおよび映画監督として、シナリオから登場人物を分析・抽出してください。
+    ${exaggerationInstruction}
+
+    【Identity Anchoring】
+    画像生成AIが「全シーンで同じ人物」と認識し続けられるよう、具体的かつ詳細な日本語で記述してください。
+
     Scenario:
     ${scenario}`,
     config: {
       responseMimeType: "application/json",
       responseSchema: schema,
-      systemInstruction: "出力は厳密にJSON形式のみとしてください。すべての値は日本語で記述してください。",
+      systemInstruction: "出力は日本語のJSON配列のみ。キャラクターの個性を視覚的に定義すること。",
     },
   }));
 
@@ -219,6 +251,7 @@ export const generateStoryboardScenes = async (
 
           return {
             id: startId + index, // Correct ID based on batch offset
+            instanceId: `scene_${Date.now()}_${startId + index}`,
             description: s.description,
             subjectAndComposition: s.subjectAndComposition,
             setting: s.setting,
@@ -246,17 +279,15 @@ export const generateStoryboardScenes = async (
 /**
  * Generates a reference image for a character.
  */
-export const generateCharacterReference = async (character: Character): Promise<string> => {
-  const prompt = `
-    You are an expert AI photographer. Generate a photorealistic portrait based on the following Japanese description.
-    Translate the description to English internally for better accuracy.
+export const generateCharacterReference = async (character: Character, style: ImageStyle = 'realistic'): Promise<string> => {
+  const stylePrompt = getStylePrompt(style);
 
-    Identity Anchor: ${character.name}
-    Visuals (Japanese): ${character.visualDescription}
-    Style: Photorealistic, 8k resolution, Japanese portrait, cinematic lighting, neutral background.
-    Shot: Medium Close-up.
-    IMPORTANT: No text, no captions, no watermarks, no japanese characters.
-  `;
+  const exaggeration = (style === 'ghibli' || style === 'pixar')
+    ? `Exaggerated and characteristic features reflecting their personality as a ${character.role}.`
+    : `STRICT REALISM: Authentic human skin texture, natural eye structure, non-stylized features.`;
+
+  const prompt = `PHOTOGRAPHIC CHARACTER REFERENCE: ${character.name}. ${character.visualDescription}. ${exaggeration} ${stylePrompt}.
+    Focus: Professional portrait and medium shot. 8k resolution. IMPORTANT: No text, no captions, no watermarks, no japanese characters.`;
 
   const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
     model: MODEL_IMAGE,
@@ -279,51 +310,40 @@ export const generateCharacterReference = async (character: Character): Promise<
 /**
  * Generates the final scene image.
  */
-export const generateSceneImage = async (scene: Scene, allCharacters: Character[]): Promise<string> => {
+export const generateSceneImage = async (scene: Scene, allCharacters: Character[], style: ImageStyle = 'realistic'): Promise<string> => {
   const sceneChars = allCharacters.filter(c => scene.charactersInScene.includes(c.id));
-  
-  let prompt = "You are a world-class cinematographer and AI image generator. \n";
-  prompt += "TASK: Generate a photorealistic, 16:9 cinematic shot based on the provided Japanese scene details. \n";
-  prompt += "INSTRUCTION: Translate all Japanese details into a rich, descriptive English prompt internally to ensure the highest quality generation. Maintain consistency with the Identity Anchors.\n\n";
-  
-  if (sceneChars.length > 0) {
-    prompt += "Identity Anchors (Characters - Visual Descriptions):\n";
-    sceneChars.forEach(c => {
-      prompt += `- ${c.name} (Japanese): ${c.visualDescription}\n`;
-    });
-    prompt += "\n";
-  }
+  const stylePrompt = getStylePrompt(style);
 
-  prompt += "### SCENE DETAILS (Japanese) ###\n";
-  
+  let prompt = `${stylePrompt}\n`;
+  prompt += `ENVIRONMENT: ${scene.setting}.\n`;
+  prompt += `CINEMATOGRAPHY: ${scene.subjectAndComposition}. Sharp focus, high depth of field.\n`;
+
   if (scene.customPrompt && scene.customPrompt.trim().length > 0) {
     prompt += `Detailed Instruction: ${scene.customPrompt}\n`;
+  } else if (sceneChars.length > 0) {
+    prompt += `CHARACTERS:\n`;
+    sceneChars.forEach(c => {
+      prompt += `- ${c.name}: ${c.visualDescription}. Current Emotion: ${scene.emotion}. Performing: ${scene.action}. Realistic human acting.\n`;
+    });
   } else {
-    prompt += `Context: ${scene.description}\n`;
-    prompt += `Location/Time/Weather: ${scene.setting}\n`;
-    prompt += `Subject & Composition: ${scene.subjectAndComposition}\n`;
-    prompt += `Action: ${scene.action}\n`;
-    prompt += `Emotion: ${scene.emotion}\n`;
+    prompt += `SCENE DESCRIPTION: ${scene.description}.\n`;
   }
 
-  prompt += `\n### STYLE & FORMAT ###\n`;
-  prompt += `Style: Photorealistic, cinematic photography, 8k, highly detailed, cinematic color grading, 16:9 aspect ratio.\n`;
-  prompt += `Visuals: Raw footage, clean shot, focus on the subject and environment.\n`;
-  
-  // STRONG NEGATIVE PROMPTING
-  prompt += `NEGATIVE PROMPT (STRICTLY FORBIDDEN): text, subtitles, captions, lower thirds, news ticker, tv interface, watermark, logo, typography, letters, kanji, hiragana, katakana, movie credits, date stamp, speech bubble, blurry bars, borders.\n`;
-  prompt += `IMPORTANT: The final image must be completely FREE OF TEXT. No Japanese characters or subtitles on the screen.`;
+  const realismEnforcer = (style === 'realistic') ? "STRICTLY NO ANIME, NO DRAWING, NO 2D ART, NO ILLUSTRATION, NO CARTOON STYLE. This is a real RAW photo." : "";
+
+  prompt += `\nNEGATIVE PROMPT (STRICTLY FORBIDDEN): text, subtitles, captions, lower thirds, news ticker, tv interface, watermark, logo, typography, letters, kanji, hiragana, katakana, movie credits, date stamp, speech bubble, blurry bars, borders.\n`;
+  prompt += `STRICT: NO TEXT, NO LOGO. 16:9 Aspect Ratio. ${realismEnforcer} High production quality.`;
 
   const parts: any[] = [];
-  
+
   if (sceneChars.length > 0 && sceneChars[0].referenceImage) {
-     parts.push({
-       inlineData: {
-         mimeType: "image/png",
-         data: sceneChars[0].referenceImage
-       }
-     });
-     prompt += `\n(Reference image provided for character: ${sceneChars[0].name}. Use this for facial structure and consistency.)`;
+    parts.push({
+      inlineData: {
+        mimeType: "image/png",
+        data: sceneChars[0].referenceImage
+      }
+    });
+    prompt += `\n(Reference image provided for character: ${sceneChars[0].name}. Use this for facial structure and consistency.)`;
   }
 
   parts.push({ text: prompt });
@@ -344,4 +364,60 @@ export const generateSceneImage = async (scene: Scene, allCharacters: Character[
     }
   }
   throw new Error("No image generated");
+};
+
+/**
+ * Generates a single scene from a text snippet (for manual scene addition).
+ */
+export const generateSingleSceneFromSnippet = async (text: string, characters: Character[]): Promise<Omit<Scene, 'id' | 'instanceId'>> => {
+  const charSummary = characters.map(c => `${c.name}: ${c.visualDescription}`).join("\n");
+
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      description: { type: Type.STRING },
+      subjectAndComposition: { type: Type.STRING },
+      setting: { type: Type.STRING },
+      action: { type: Type.STRING },
+      emotion: { type: Type.STRING },
+      charactersInScene: { type: Type.ARRAY, items: { type: Type.STRING } },
+      originalScriptExcerpt: { type: Type.STRING },
+    },
+    required: ["description", "subjectAndComposition", "setting", "action", "emotion", "charactersInScene", "originalScriptExcerpt"],
+  };
+
+  const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+    model: MODEL_TEXT_FAST,
+    contents: `以下の内容を絵コンテ1シーンに変換してください。各フィールドを詳細に記述してください。
+
+Text: ${text}
+
+Characters:
+${charSummary}`,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: schema,
+      systemInstruction: "出力は日本語のJSONのみ。",
+    },
+  }));
+
+  try {
+    const s = JSON.parse(cleanJson(response.text));
+    const mappedCharIds = (s.charactersInScene || []).map((name: string) => {
+      const found = characters.find(c => name.toLowerCase().includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(name.toLowerCase()));
+      return found ? found.id : null;
+    }).filter((id: string | null) => id !== null);
+
+    return {
+      description: s.description || "",
+      subjectAndComposition: s.subjectAndComposition || "",
+      setting: s.setting || "",
+      action: s.action || "",
+      emotion: s.emotion || "",
+      charactersInScene: mappedCharIds,
+      originalScriptExcerpt: s.originalScriptExcerpt || text.substring(0, 30),
+    };
+  } catch (e) {
+    throw new Error("AIからのシーンデータ解析に失敗しました。");
+  }
 };
