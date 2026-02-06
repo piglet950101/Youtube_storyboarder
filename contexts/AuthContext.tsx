@@ -131,12 +131,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Handle actual sign-in
       if (event === 'SIGNED_IN' && newSession) {
-        setSession(newSession);
-        // Only reload profile if we don't have user data yet
-        // This prevents the loading screen from showing on window refocus
+        // Only update session and load profile if we don't have user data yet.
+        // Supabase fires multiple SIGNED_IN events (window focus, token refresh)
+        // and calling setSession each time causes unnecessary re-renders that
+        // can crash React DOM reconciliation (insertBefore error).
         setUser((currentUser) => {
           if (!currentUser) {
-            // Need to load profile - do it async
+            setSession(newSession);
             setLoading(true);
             loadUserProfile(newSession.user.id).finally(() => setLoading(false));
           }

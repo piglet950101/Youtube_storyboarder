@@ -261,7 +261,7 @@ const AppContent: React.FC = () => {
       )}
 
       {activeTab === 'storyboarder' ? (
-        <>
+        <div key="tab-storyboarder">
           <StepIndicator
             currentStep={currentStep}
             onHome={handleHome}
@@ -339,11 +339,11 @@ const AppContent: React.FC = () => {
               </div>
             )}
           </main>
-        </>
+        </div>
       ) : (
-        <main className="pt-8">
+        <div key="tab-replicator" className="pt-8">
           <ReplicatorView onOpenPricing={() => setShowPricing(true)} />
-        </main>
+        </div>
       )}
     </div>
   );
