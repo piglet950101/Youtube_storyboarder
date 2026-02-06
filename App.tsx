@@ -13,7 +13,7 @@ import { Header } from './components/Header';
 import { ReplicatorView } from './components/replicator/ReplicatorView';
 import { useAuth } from './contexts/AuthContext';
 import { analyzeCharactersFromScript, generateStoryboardScenes, generateCharacterReference, generateSingleSceneFromSnippet } from './services/geminiService';
-import { Loader2, Sparkles, Film, Zap } from 'lucide-react';
+import { Loader2, Sparkles, Film, Zap, CheckCircle } from 'lucide-react';
 
 // Loading Overlay Component
 const LoadingOverlay: React.FC<{ message: string; subMessage: string; icon?: React.ElementType }> = ({
@@ -45,6 +45,7 @@ const AppContent: React.FC = () => {
   const [isAutoMode, setIsAutoMode] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('storyboarder');
+  const [isImageBatchActive, setIsImageBatchActive] = useState(false);
 
   const [characters, setCharacters] = useState<Character[]>([]);
   const [scenes, setScenes] = useState<Scene[]>([]);
@@ -305,15 +306,37 @@ const AppContent: React.FC = () => {
             )}
 
             {currentStep === AppStep.IMAGE_PRODUCTION && (
-              <ImageGenerator
-                scenes={scenes}
-                characters={characters}
-                imageStyle={imageStyle}
-                onUpdateScene={updateScene}
-                autoStart={isAutoMode}
-                scenarioTitle={scenario.replace(/[\\/:*?"<>|\s]/g, "").substring(0, 10)}
-                onOpenPricing={() => setShowPricing(true)}
-              />
+              <div className="pb-20">
+                <ImageGenerator
+                  scenes={scenes}
+                  characters={characters}
+                  imageStyle={imageStyle}
+                  onUpdateScene={updateScene}
+                  onAddScene={handleAddSceneFromSnippet}
+                  autoStart={isAutoMode}
+                  scenarioTitle={scenario.replace(/[\\/:*?"<>|\s]/g, "").substring(0, 10)}
+                  onOpenPricing={() => setShowPricing(true)}
+                  onBatchStatusChange={setIsImageBatchActive}
+                />
+                {scenes.length > 0 && scenes.every(s => s.generatedImage) && !isImageBatchActive && (
+                  <div className="max-w-7xl mx-auto px-4 mt-8 flex justify-center">
+                    <div className="bg-green-900/20 border border-green-500/30 rounded-2xl p-6 flex flex-col items-center gap-4 text-center max-w-lg">
+                      <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center shadow-lg">
+                        <CheckCircle size={32} className="text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-white">全シーンの生成が完了しました！</h3>
+                        <p className="text-zinc-400 text-sm mt-2">
+                          全ての画像が揃いました。ZIP保存ボタンから一括ダウンロードして動画編集に活用してください。
+                        </p>
+                      </div>
+                      <button onClick={handleHome} className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 px-8 rounded-xl transition-all">
+                        新しい制作を開始する
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </main>
         </>

@@ -109,6 +109,7 @@ export const analyzeCharactersFromScript = async (scenario: string, style: Image
       responseMimeType: "application/json",
       responseSchema: schema,
       systemInstruction: "出力は日本語のJSON配列のみ。キャラクターの個性を視覚的に定義すること。",
+      thinkingConfig: { thinkingBudget: 16000 },
     },
   }));
 
@@ -133,7 +134,7 @@ export const generateStoryboardScenes = async (
   totalSceneCount: number,
   onProgress?: (completed: number, total: number) => void
 ): Promise<Scene[]> => {
-  const charSummary = characters.map(c => `${c.name}: ${c.visualDescription}`).join("\n");
+  const charSummary = characters.map(c => `${c.name} (${c.personality}): ${c.visualDescription}`).join("\n");
   const BATCH_SIZE = 20;
   let allScenes: Scene[] = [];
 
@@ -229,6 +230,7 @@ export const generateStoryboardScenes = async (
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,
+        thinkingConfig: { thinkingBudget: 16000 },
       },
     }));
 
@@ -370,7 +372,7 @@ export const generateSceneImage = async (scene: Scene, allCharacters: Character[
  * Generates a single scene from a text snippet (for manual scene addition).
  */
 export const generateSingleSceneFromSnippet = async (text: string, characters: Character[]): Promise<Omit<Scene, 'id' | 'instanceId'>> => {
-  const charSummary = characters.map(c => `${c.name}: ${c.visualDescription}`).join("\n");
+  const charSummary = characters.map(c => `${c.name} (${c.personality}): ${c.visualDescription}`).join("\n");
 
   const schema: Schema = {
     type: Type.OBJECT,
@@ -398,6 +400,7 @@ ${charSummary}`,
       responseMimeType: "application/json",
       responseSchema: schema,
       systemInstruction: "出力は日本語のJSONのみ。",
+      thinkingConfig: { thinkingBudget: 16000 },
     },
   }));
 

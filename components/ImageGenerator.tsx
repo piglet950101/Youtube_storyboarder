@@ -4,7 +4,7 @@ import { Scene, Character, COST_PER_IMAGE, ImageStyle } from '../types';
 import { generateSceneImage } from '../services/geminiService';
 import { useAuth } from '../contexts/AuthContext';
 import { validateTokensForGeneration, deductTokensForImage } from '../services/imageGenerationService';
-import { Play, RefreshCw, Download, Edit2, X, Check, Square, Package, Lock, AlertCircle } from 'lucide-react';
+import { Play, RefreshCw, Download, Edit2, X, Check, Square, Package, Lock, AlertCircle, Plus, Sparkles } from 'lucide-react';
 import { getSceneFileName } from '../utils/fileHelpers';
 import JSZip from 'jszip';
 
@@ -13,26 +13,49 @@ interface Props {
   characters: Character[];
   imageStyle: ImageStyle;
   onUpdateScene: (id: number, updates: Partial<Scene>) => void;
+  onAddScene: (text: string) => Promise<void>;
   autoStart?: boolean;
   scenarioTitle: string;
   onOpenPricing: () => void;
+  onBatchStatusChange?: (isActive: boolean) => void;
 }
+
+const getStyleLabel = (style: ImageStyle) => {
+  switch (style) {
+    case 'realistic': return 'リアル';
+    case 'anime': return 'アニメ風';
+    case 'anime_moe': return '萌えアニメ風';
+    case 'ghibli': return 'ジブリ風';
+    case 'ukiyo_e': return '浮世絵風';
+    case 'pixar': return 'ピクサー風';
+    default: return style;
+  }
+};
 
 export const ImageGenerator: React.FC<Props> = ({
   scenes,
   characters,
   imageStyle,
   onUpdateScene,
+  onAddScene,
   autoStart = false,
   scenarioTitle,
-  onOpenPricing
+  onOpenPricing,
+  onBatchStatusChange
 }) => {
   const { user, consumeTokens } = useAuth();
   const [isBatchGenerating, setIsBatchGenerating] = useState(false);
   const [generatingIds, setGeneratingIds] = useState<Set<number>>(new Set());
   const [editingSceneId, setEditingSceneId] = useState<number | null>(null);
+  const [isAddingScene, setIsAddingScene] = useState(false);
+  const [newSceneText, setNewSceneText] = useState("");
+  const [isCreatingScene, setIsCreatingScene] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const stopSignalRef = useRef(false);
+
+  useEffect(() => {
+    onBatchStatusChange?.(isBatchGenerating);
+  }, [isBatchGenerating, onBatchStatusChange]);
 
   // Auto Start Effect
   useEffect(() => {
@@ -168,21 +191,45 @@ export const ImageGenerator: React.FC<Props> = ({
     setEditingSceneId(scene.id);
   };
 
+  const handleCreateNewScene = async () => {
+    if (!newSceneText.trim()) return;
+    setIsCreatingScene(true);
+    try {
+      await onAddScene(newSceneText);
+      setIsAddingScene(false);
+      setNewSceneText("");
+    } catch (e) {
+      alert("シーンの生成に失敗しました。");
+    } finally {
+      setIsCreatingScene(false);
+    }
+  };
+
   return (
     <div className="max-w-[1600px] mx-auto mt-10 px-4 pb-20 relative">
       <div className="flex justify-between items-center mb-6 sticky top-16 z-30 bg-[#0f0f0f] py-4 border-b border-zinc-800">
         <div>
           <h2 className="text-2xl font-bold text-white">Step 4: 画像制作 (Production)</h2>
           <p className="text-zinc-400">
+             画風: <span className="text-red-500 font-bold">{getStyleLabel(imageStyle)}</span> | 全 {scenes.length} シーン
+             <span className="text-zinc-500 mx-2">|</span>
              <span className="text-yellow-400 font-bold">Wallet: {user?.tokens.toLocaleString()} t</span>
              <span className="text-zinc-500 text-xs ml-2">(Cost: {COST_PER_IMAGE}t / img)</span>
           </p>
         </div>
         <div className="flex gap-4">
+          {/* Add Scene */}
+          <button
+            onClick={() => setIsAddingScene(true)}
+            className="px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg"
+          >
+            <Plus size={20} /> シーン追加
+          </button>
+
           {/* Download ZIP */}
           <button
             onClick={handleDownloadZip}
-            className="px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg font-semibold flex items-center gap-2 transition-colors"
+            className="px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg font-semibold flex items-center gap-2 transition-all shadow-lg"
             title="生成済み画像をまとめてダウンロード"
           >
             <Package size={20} /> ZIP保存
@@ -194,19 +241,45 @@ export const ImageGenerator: React.FC<Props> = ({
               onClick={stopBatchGeneration}
               className="px-6 py-3 rounded-lg font-semibold flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white animate-pulse"
             >
-              <Square fill="currentColor" size={16} /> 生成停止
+              <Square fill="currentColor" size={16} /> 生成停止 ({batchProgress.current}/{batchProgress.total})
             </button>
           ) : (
             <button
               onClick={startBatchGeneration}
-              className="px-6 py-3 rounded-lg font-semibold flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+              className="px-6 py-3 rounded-lg font-semibold flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white shadow-lg transition-all hover:scale-105"
             >
-              <Play fill="currentColor" size={16} /> 
-              {scenes.some(s => !s.generatedImage) ? '未生成分を一括生成' : '生成完了'}
+              <Play fill="currentColor" size={16} />
+              {scenes.some(s => !s.generatedImage) ? '未生成を一括生成' : 'すべて生成済み'}
             </button>
           )}
         </div>
       </div>
+
+      {/* Add Scene Form */}
+      {isAddingScene && (
+        <div className="bg-zinc-900 border-2 border-red-600/50 rounded-xl p-6 mb-8 max-w-2xl mx-auto shadow-2xl">
+          <h4 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+            <Sparkles size={20} className="text-red-500" /> 追加制作するシーンの内容
+          </h4>
+          <textarea
+            autoFocus
+            value={newSceneText}
+            onChange={(e) => setNewSceneText(e.target.value)}
+            className="w-full bg-zinc-950 border border-zinc-700 rounded p-4 text-white focus:border-red-600 focus:outline-none h-32 mb-4"
+            placeholder="例: 主人公が夜の街を静かに歩いている様子..."
+          />
+          <div className="flex justify-end gap-3">
+            <button onClick={() => { setIsAddingScene(false); setNewSceneText(""); }} className="px-6 py-3 text-zinc-400 hover:text-white font-bold">キャンセル</button>
+            <button
+              onClick={handleCreateNewScene}
+              disabled={!newSceneText.trim() || isCreatingScene}
+              className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-lg disabled:opacity-50 flex items-center gap-2"
+            >
+              {isCreatingScene ? <RefreshCw className="animate-spin" size={18} /> : "シーンを追加して制作"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {scenes.map((scene) => {
@@ -306,6 +379,17 @@ export const ImageGenerator: React.FC<Props> = ({
             </div>
           );
         })}
+
+        {/* Add Scene Placeholder Card */}
+        <button
+          onClick={() => setIsAddingScene(true)}
+          className="border-2 border-dashed border-zinc-800 hover:border-zinc-700 rounded-lg flex flex-col items-center justify-center text-zinc-600 hover:text-zinc-400 min-h-[220px] transition-all group"
+        >
+          <div className="w-12 h-12 bg-zinc-900 rounded-full flex items-center justify-center mb-2 group-hover:bg-zinc-800 transition-colors">
+            <Plus size={32} />
+          </div>
+          <span className="font-bold">シーンを追加</span>
+        </button>
       </div>
 
       {/* Floating Progress Indicator */}
