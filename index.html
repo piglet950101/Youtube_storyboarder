@@ -23,7 +23,12 @@
         border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #6b7280; 
+        background: #6b7280;
+      }
+      @keyframes loading-bar {
+        0% { transform: translateX(-100%); }
+        50% { transform: translateX(100%); }
+        100% { transform: translateX(-100%); }
       }
     </style>
   </head>

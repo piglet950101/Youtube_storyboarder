@@ -133,7 +133,6 @@ export const logTokenTransaction = async (
       balance_before: balanceBefore,
       balance_after: balanceAfter,
       description: `Image generation${sceneId ? ` for scene #${sceneId}` : ''}`,
-      metadata: sceneId ? { sceneId: String(sceneId) } : undefined,
     });
 
     if (error) {

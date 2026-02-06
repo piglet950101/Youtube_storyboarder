@@ -31,15 +31,8 @@ const LoadingOverlay: React.FC<{ message: string; subMessage: string; icon?: Rea
     <h3 className="text-2xl font-bold text-white tracking-wider mb-2 animate-pulse">{message}</h3>
     <p className="text-zinc-400 text-sm font-mono">{subMessage}</p>
     <div className="mt-8 w-64 h-1 bg-zinc-800 rounded-full overflow-hidden">
-      <div className="h-full bg-red-600 animate-[loading_2s_ease-in-out_infinite] w-1/2"></div>
+      <div className="h-full bg-red-600 animate-[loading-bar_2s_ease-in-out_infinite] w-1/2"></div>
     </div>
-    <style>{`
-      @keyframes loading {
-        0% { transform: translateX(-100%); }
-        50% { transform: translateX(100%); }
-        100% { transform: translateX(-100%); }
-      }
-    `}</style>
   </div>
 );
 
