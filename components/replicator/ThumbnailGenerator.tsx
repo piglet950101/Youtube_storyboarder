@@ -204,7 +204,7 @@ export const ThumbnailGenerator: React.FC<Props> = ({ onOpenPricing }) => {
 
   return (
     <div className="w-full max-w-6xl mx-auto">
-      <div className="bg-gradient-to-br from-indigo-900/20 to-cyan-900/20 border border-indigo-500/30 rounded-3xl p-6 md:p-8 relative overflow-hidden">
+      <div key={`replicator-step-${step}`} className="bg-gradient-to-br from-indigo-900/20 to-cyan-900/20 border border-indigo-500/30 rounded-3xl p-6 md:p-8 relative overflow-hidden">
 
         {/* Step 1: Input & Preview */}
         {step === 1 && (
