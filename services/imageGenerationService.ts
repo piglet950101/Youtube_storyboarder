@@ -129,7 +129,7 @@ export const logTokenTransaction = async (
     const { error } = await supabase.from('token_transactions').insert({
       user_id: userId,
       transaction_type: 'image_generation',
-      tokens_delta: -costPerImage,
+      amount: -costPerImage,
       balance_before: balanceBefore,
       balance_after: balanceAfter,
       description: `Image generation${sceneId ? ` for scene #${sceneId}` : ''}`,
