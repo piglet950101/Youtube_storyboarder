@@ -5,6 +5,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
+import './style.css';
 
 // Load Stripe with the public key from environment
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
