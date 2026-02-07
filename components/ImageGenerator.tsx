@@ -213,8 +213,8 @@ export const ImageGenerator: React.FC<Props> = ({
           <p className="text-zinc-400">
              画風: <span className="text-red-500 font-bold">{getStyleLabel(imageStyle)}</span> | 全 {scenes.length} シーン
              <span className="text-zinc-500 mx-2">|</span>
-             <span className="text-yellow-400 font-bold">Wallet: {user?.tokens.toLocaleString()} t</span>
-             <span className="text-zinc-500 text-xs ml-2">(Cost: {COST_PER_IMAGE}t / img)</span>
+             <span className="text-yellow-400 font-bold">Wallet: {user?.tokens.toLocaleString()} C</span>
+             <span className="text-zinc-500 text-xs ml-2">(Cost: {COST_PER_IMAGE}C / img)</span>
           </p>
         </div>
         <div className="flex gap-4">
@@ -307,7 +307,7 @@ export const ImageGenerator: React.FC<Props> = ({
                         onClick={() => generateSingle(scene)}
                         className="mt-3 w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded flex items-center justify-center gap-2 text-sm font-bold"
                       >
-                        <RefreshCw size={14} /> 保存して再生成 (-{COST_PER_IMAGE}t)
+                        <RefreshCw size={14} /> 保存して再生成 (-{COST_PER_IMAGE}C)
                       </button>
                    </div>
                 ) : (
@@ -429,7 +429,7 @@ export const ImageGenerator: React.FC<Props> = ({
                <div className="flex justify-between items-center text-xs pt-1 border-t border-zinc-800">
                   <span className="text-zinc-500">残クレジット:</span>
                   <span className="font-mono font-bold text-yellow-500">
-                     {user?.tokens.toLocaleString()} t
+                     {user?.tokens.toLocaleString()} C
                   </span>
                </div>
             </div>

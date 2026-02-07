@@ -168,10 +168,10 @@ export const ScenarioInput: React.FC<Props> = ({
 
             <div className="text-center border-t border-zinc-700/50 pt-2 mt-1">
               <p className="text-[10px] text-zinc-400">
-                予想コスト: <span className={estimatedCost > tokens ? "text-red-500 font-bold" : "text-zinc-300"}>{estimatedCost}</span> t
+                予想コスト: <span className={estimatedCost > tokens ? "text-red-500 font-bold" : "text-zinc-300"}>{estimatedCost}</span> C
               </p>
               <p className="text-[10px] text-zinc-500">
-                (残高: {tokens} t)
+                (残高: {tokens} C)
               </p>
               {estimatedCost > tokens && (
                 <button onClick={onOpenPricing} className="text-xs text-red-400 hover:text-red-300 underline mt-1">

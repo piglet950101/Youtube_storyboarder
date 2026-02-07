@@ -162,7 +162,7 @@ export const ImageRemixer: React.FC<ImageRemixerProps> = ({ src, onOpenPricing, 
             ) : (
               <>
                 <Wand2 className="w-5 h-5 mr-2" />
-                バリエーションを2つ生成 (-{REMIX_COST}t)
+                バリエーションを2つ生成 (-{REMIX_COST}C)
               </>
             )}
           </button>

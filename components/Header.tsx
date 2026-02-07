@@ -60,10 +60,10 @@ export const Header: React.FC<Props> = ({ onOpenPricing, activeTab, onTabChange 
           {user.plan === 'pro_standard' || user.plan === 'pro_premium' ? (
             <>
               <Zap size={16} className="text-yellow-400 fill-yellow-400" />
-              <span className="text-white font-bold text-sm">{user.tokens.toLocaleString()} <span className="text-zinc-500">t</span></span>
+              <span className="text-white font-bold text-sm">{user.tokens.toLocaleString()} <span className="text-zinc-500">C</span></span>
             </>
           ) : (
-            <span className="text-xs text-zinc-400">Free Plan: {user.tokens} t</span>
+            <span className="text-xs text-zinc-400">Free Plan: {user.tokens} C</span>
           )}
         </div>
 

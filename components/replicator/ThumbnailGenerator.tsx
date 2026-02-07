@@ -363,7 +363,7 @@ export const ThumbnailGenerator: React.FC<Props> = ({ onOpenPricing }) => {
                 ) : (
                   <>
                     <Wand2 className="w-5 h-5 mr-2" />
-                    この内容で画像を生成 (-{COST_PER_IMAGE}t)
+                    この内容で画像を生成 (-{COST_PER_IMAGE}C)
                   </>
                 )}
               </button>
