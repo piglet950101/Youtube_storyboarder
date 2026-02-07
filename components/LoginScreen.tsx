@@ -174,7 +174,7 @@ export const LoginScreen: React.FC = () => {
           </div>
         </div>
 
-        <h1 className="text-3xl font-black text-center mb-2">CineGen JP</h1>
+        <h1 className="text-3xl font-black text-center mb-2">ALGORiTHM</h1>
         <p className="text-zinc-400 text-center mb-8 text-sm">
           YouTube特化型AI絵コンテ・画像生成ツール<br />
           プロフェッショナルな映像制作をサポート

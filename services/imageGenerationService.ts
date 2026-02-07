@@ -39,7 +39,7 @@ export const validateTokensForGeneration = async (
     if (balance < costPerImage) {
       return {
         valid: false,
-        reason: `トークンが不足しています。必要: ${costPerImage}, 所持: ${balance}`,
+        reason: `クレジットが不足しています。必要: ${costPerImage}, 所持: ${balance}`,
         balance,
         costPerImage,
       };
@@ -54,7 +54,7 @@ export const validateTokensForGeneration = async (
     console.error('[Image Generation] Token validation error:', err);
     return {
       valid: false,
-      reason: err.message || 'トークン検証中にエラーが発生しました',
+      reason: err.message || 'クレジット検証中にエラーが発生しました',
       costPerImage,
     };
   }
@@ -77,7 +77,7 @@ export const deductTokensForImage = async (
         success: false,
         balanceBefore: 0,
         balanceAfter: 0,
-        error: error.message || 'トークンの消費に失敗しました',
+        error: error.message || 'クレジットの消費に失敗しました',
       };
     }
 
@@ -86,7 +86,7 @@ export const deductTokensForImage = async (
         success: false,
         balanceBefore: 0,
         balanceAfter: 0,
-        error: 'トークン消費の結果が返されませんでした',
+        error: 'クレジット消費の結果が返されませんでした',
       };
     }
 

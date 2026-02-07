@@ -42,7 +42,7 @@ export const ImageRemixer: React.FC<ImageRemixerProps> = ({ src, onOpenPricing, 
     // Token validation: 2 images = 2x cost
     const validation = await validateTokensForGeneration(user.uid, REMIX_COST);
     if (!validation.valid) {
-      alert(`${validation.reason}\n\nリミックスには ${REMIX_COST} トークンが必要です。`);
+      alert(`${validation.reason}\n\nリミックスには ${REMIX_COST} クレジットが必要です。`);
       onOpenPricing();
       return;
     }

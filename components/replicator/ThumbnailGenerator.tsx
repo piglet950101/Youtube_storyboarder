@@ -154,7 +154,7 @@ export const ThumbnailGenerator: React.FC<Props> = ({ onOpenPricing }) => {
     // Token validation
     const validation = await validateTokensForGeneration(user.uid, COST_PER_IMAGE);
     if (!validation.valid) {
-      alert(`${validation.reason}\n\nプランをアップグレードするか、トークンを追加購入してください。`);
+      alert(`${validation.reason}\n\nプランをアップグレードするか、クレジットを追加購入してください。`);
       onOpenPricing();
       return;
     }

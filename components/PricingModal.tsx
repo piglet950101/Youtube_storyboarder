@@ -136,7 +136,7 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
         // Success!
         const message = pendingPayment.type === 'plan_upgrade'
           ? `${pendingPayment.plan === 'pro_premium' ? 'プレミアム' : 'スタンダード'}プランへのアップグレードが完了しました！`
-          : `${pendingPayment.tokens.toLocaleString()}トークンが追加されました！`;
+          : `${pendingPayment.tokens.toLocaleString()}クレジットが追加されました！`;
 
         setSuccessMessage(message);
         setPaymentFlow('success');
@@ -210,7 +210,7 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
       const planName = pendingDowngrade.targetPlan === 'free' ? 'Free' : 'スタンダード';
       let message = `${planName}プランに変更しました`;
       if (result.tokensLost > 0) {
-        message += `\n(${result.tokensLost.toLocaleString()}トークンが上限により削減されました)`;
+        message += `\n(${result.tokensLost.toLocaleString()}クレジットが上限により削減されました)`;
       }
 
       setSuccessMessage(message);
@@ -250,7 +250,7 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <h2 className="text-2xl font-bold text-white">料金プラン</h2>
             <p className="text-zinc-400 text-sm">
               {isPro
-                ? `現在: ${isPremium ? 'プレミアム' : 'スタンダード'}プラン | 残高: ${user?.tokens.toLocaleString()} トークン`
+                ? `現在: ${isPremium ? 'プレミアム' : 'スタンダード'}プラン | 残高: ${user?.tokens.toLocaleString()} クレジット`
                 : 'ニーズに合わせて最適なプランをお選びください'
               }
             </p>
@@ -277,13 +277,13 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   <p className="text-zinc-400 text-sm mt-1">
                     {pendingPayment.type === 'plan_upgrade'
                       ? `${pendingPayment.plan === 'pro_premium' ? 'プレミアム' : 'スタンダード'}プラン`
-                      : 'トークン追加購入'
+                      : 'クレジット追加購入'
                     }
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold text-white">¥{pendingPayment.amount.toLocaleString()}</p>
-                  <p className="text-xs text-green-400">+{pendingPayment.tokens.toLocaleString()} トークン</p>
+                  <p className="text-xs text-green-400">+{pendingPayment.tokens.toLocaleString()} クレジット</p>
                 </div>
               </div>
 
@@ -398,7 +398,7 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-400">現在のトークン</span>
+                  <span className="text-zinc-400">現在のクレジット</span>
                   <span className="text-white font-semibold">{user?.tokens.toLocaleString()}</span>
                 </div>
               </div>
@@ -407,11 +407,11 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <div className="bg-red-900/20 border border-red-900/50 rounded-lg p-4 mb-4">
                   <div className="flex items-center gap-2 text-red-400 mb-2">
                     <AlertTriangle size={16} />
-                    <span className="font-semibold">注意: トークンが削減されます</span>
+                    <span className="font-semibold">注意: クレジットが削減されます</span>
                   </div>
                   <p className="text-red-300 text-sm">
-                    ダウングレード後のトークン上限({pendingDowngrade.targetPlan === 'free' ? '100' : '10,000'})を超えているため、
-                    <span className="font-bold text-red-400"> {pendingDowngrade.tokensLoss.toLocaleString()} トークン</span>が失われます。
+                    ダウングレード後のクレジット上限({pendingDowngrade.targetPlan === 'free' ? '100' : '10,000'})を超えているため、
+                    <span className="font-bold text-red-400"> {pendingDowngrade.tokensLoss.toLocaleString()} クレジット</span>が失われます。
                   </p>
                 </div>
               )}
@@ -444,7 +444,7 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   <h3 className="text-lg font-bold text-zinc-400 mb-2">Free Plan</h3>
                   <div className="text-3xl font-black text-white mb-4">¥0 <span className="text-sm font-medium text-zinc-500">/ 永久</span></div>
                   <p className="text-sm text-zinc-400 mb-6 min-h-[40px]">
-                    初回のみ {FREE_INITIAL_TOKENS} トークン付与<br/>
+                    初回のみ {FREE_INITIAL_TOKENS} クレジット付与<br/>
                     (約 {FREE_INITIAL_TOKENS / COST_PER_IMAGE} 枚 生成可能)
                   </p>
 
@@ -459,7 +459,7 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     </li>
                     <li className="flex items-center gap-2 text-zinc-500 line-through">
                       <X size={16} />
-                      <span>トークン追加購入</span>
+                      <span>クレジット追加購入</span>
                     </li>
                   </ul>
 
@@ -487,25 +487,25 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   </h3>
                   <div className="text-3xl font-black text-white mb-4">¥{STRIPE_PRICING.standard.price.toLocaleString()} <span className="text-sm font-medium text-zinc-500">/ 一度</span></div>
                   <p className="text-sm text-zinc-400 mb-6 min-h-[40px]">
-                    {STRIPE_PRICING.standard.initialTokens.toLocaleString()} トークン付与<br/>
+                    {STRIPE_PRICING.standard.initialTokens.toLocaleString()} クレジット付与<br/>
                     (約 {Math.floor(STRIPE_PRICING.standard.initialTokens / COST_PER_IMAGE)} 枚 生成可能)
                   </p>
 
                   <div className="bg-red-900/20 border border-red-900/50 rounded p-3 mb-6">
-                    <p className="text-xs text-red-300 font-bold mb-1">追加トークン購入:</p>
+                    <p className="text-xs text-red-300 font-bold mb-1">追加クレジット購入:</p>
                     <p className="text-sm text-white">
-                      {STRIPE_PRICING.standard.topUp.tokens.toLocaleString()}トークン / ¥{STRIPE_PRICING.standard.topUp.price.toLocaleString()}
+                      {STRIPE_PRICING.standard.topUp.tokens.toLocaleString()}クレジット / ¥{STRIPE_PRICING.standard.topUp.price.toLocaleString()}
                     </p>
                   </div>
 
                   <ul className="space-y-3 mb-8 flex-1 text-sm">
                     <li className="flex items-center gap-2 text-white">
                       <Check className="text-green-500 flex-shrink-0" size={16} />
-                      <span>{STRIPE_PRICING.standard.maxTokens.toLocaleString()}トークンまで保有可能</span>
+                      <span>{STRIPE_PRICING.standard.maxTokens.toLocaleString()}クレジットまで保有可能</span>
                     </li>
                     <li className="flex items-center gap-2 text-white">
                       <Check className="text-green-500 flex-shrink-0" size={16} />
-                      <span>トークン追加購入可能</span>
+                      <span>クレジット追加購入可能</span>
                     </li>
                     <li className="flex items-center gap-2 text-white">
                       <Check className="text-green-500 flex-shrink-0" size={16} />
@@ -549,25 +549,25 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   </h3>
                   <div className="text-3xl font-black text-white mb-4">¥{STRIPE_PRICING.premium.price.toLocaleString()} <span className="text-sm font-medium text-zinc-500">/ 一度</span></div>
                   <p className="text-sm text-zinc-400 mb-6 min-h-[40px]">
-                    {STRIPE_PRICING.premium.initialTokens.toLocaleString()} トークン付与<br/>
+                    {STRIPE_PRICING.premium.initialTokens.toLocaleString()} クレジット付与<br/>
                     (約 {Math.floor(STRIPE_PRICING.premium.initialTokens / COST_PER_IMAGE)} 枚 生成可能)
                   </p>
 
                   <div className="bg-amber-900/20 border border-amber-900/50 rounded p-3 mb-6">
                     <p className="text-xs text-amber-300 font-bold mb-1">プレミアム追加購入:</p>
                     <p className="text-sm text-white">
-                      {STRIPE_PRICING.premium.topUp.tokens.toLocaleString()}トークン / ¥{STRIPE_PRICING.premium.topUp.price.toLocaleString()} (3倍お得!)
+                      {STRIPE_PRICING.premium.topUp.tokens.toLocaleString()}クレジット / ¥{STRIPE_PRICING.premium.topUp.price.toLocaleString()} (3倍お得!)
                     </p>
                   </div>
 
                   <ul className="space-y-3 mb-8 flex-1 text-sm">
                     <li className="flex items-center gap-2 text-white">
                       <Check className="text-green-500 flex-shrink-0" size={16} />
-                      <span>{STRIPE_PRICING.premium.maxTokens.toLocaleString()}トークンまで保有可能</span>
+                      <span>{STRIPE_PRICING.premium.maxTokens.toLocaleString()}クレジットまで保有可能</span>
                     </li>
                     <li className="flex items-center gap-2 text-white">
                       <Check className="text-green-500 flex-shrink-0" size={16} />
-                      <span>プレミアム価格でトークン購入</span>
+                      <span>プレミアム価格でクレジット購入</span>
                     </li>
                     <li className="flex items-center gap-2 text-white">
                       <Check className="text-green-500 flex-shrink-0" size={16} />
@@ -602,11 +602,11 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                       <Coins size={24} className="text-yellow-500" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-white">トークン追加購入</h3>
+                      <h3 className="text-lg font-bold text-white">クレジット追加購入</h3>
                       <p className="text-sm text-zinc-400">
                         {isPremium
-                          ? `プレミアム価格: ${STRIPE_PRICING.premium.topUp.tokens.toLocaleString()}トークン/¥${STRIPE_PRICING.premium.topUp.price.toLocaleString()}`
-                          : `スタンダード価格: ${STRIPE_PRICING.standard.topUp.tokens.toLocaleString()}トークン/¥${STRIPE_PRICING.standard.topUp.price.toLocaleString()}`}
+                          ? `プレミアム価格: ${STRIPE_PRICING.premium.topUp.tokens.toLocaleString()}クレジット/¥${STRIPE_PRICING.premium.topUp.price.toLocaleString()}`
+                          : `スタンダード価格: ${STRIPE_PRICING.standard.topUp.tokens.toLocaleString()}クレジット/¥${STRIPE_PRICING.standard.topUp.price.toLocaleString()}`}
                       </p>
                     </div>
                   </div>
@@ -614,7 +614,7 @@ export const PricingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   <div className="flex items-center justify-between bg-zinc-900 rounded-lg p-4">
                     <div>
                       <p className="text-white font-semibold">
-                        +{getTopUpTokens().toLocaleString()} トークン
+                        +{getTopUpTokens().toLocaleString()} クレジット
                       </p>
                       <p className="text-zinc-500 text-xs">
                         現在の残高: {user?.tokens.toLocaleString()} / {isPremium ? STRIPE_PRICING.premium.maxTokens.toLocaleString() : STRIPE_PRICING.standard.maxTokens.toLocaleString()}

@@ -55,7 +55,7 @@ export const ScenarioInput: React.FC<Props> = ({
   const handleNextClick = () => {
     if (tokens < estimatedCost) {
       const wantsToBuy = window.confirm(
-        `【トークン残高不足】\n\n設定された構成（${effectiveSceneCount}シーン）の生成には ${estimatedCost} トークンが必要ですが、現在の残高は ${tokens} トークンです。\n\n生成を開始するにはトークンの追加購入が必要です。\n購入画面へ移動しますか？`
+        `【クレジット残高不足】\n\n設定された構成（${effectiveSceneCount}シーン）の生成には ${estimatedCost} クレジットが必要ですが、現在の残高は ${tokens} クレジットです。\n\n生成を開始するにはクレジットの追加購入が必要です。\n購入画面へ移動しますか？`
       );
       if (wantsToBuy) {
         onOpenPricing();
@@ -77,14 +77,14 @@ export const ScenarioInput: React.FC<Props> = ({
         <div className="flex items-center gap-3">
           {isFree && (
             <div className="text-xs text-yellow-500 border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 rounded">
-              Free Plan: 残り {tokens} トークン
+              Free Plan: 残り {tokens} クレジット
             </div>
           )}
           <div className="bg-blue-900/20 border border-blue-800/50 p-3 rounded-lg flex gap-3 max-w-xs">
             <Info size={18} className="text-blue-400 flex-shrink-0 mt-0.5" />
             <p className="text-[11px] text-zinc-300 leading-normal">
               <span className="text-blue-400 font-bold block mb-1">手動シーン分割Tip:</span>
-              文章の区切りに <code className="bg-zinc-800 px-1 rounded text-white">[SCENE]</code> と入れると、AIがその箇所で必ず新しいシーンを作成します。
+              文章の区切りに <code className="bg-zinc-800 px-1 rounded text-white">[SCENE]</code> と入れると、AIがその箇所で新しいシーンを作成しやすくします。
             </p>
           </div>
         </div>

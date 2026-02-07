@@ -234,8 +234,8 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       amount = pricing.amount;
       tokensToGrant = pricing.tokens;
       description = body.plan === 'pro_standard'
-        ? `CineGen JP - Pro Standard Upgrade (${tokensToGrant.toLocaleString()} tokens)`
-        : `CineGen JP - Pro Premium Upgrade (${tokensToGrant.toLocaleString()} tokens)`;
+        ? `ALGORiTHM - Pro Standard Upgrade (${tokensToGrant.toLocaleString()} tokens)`
+        : `ALGORiTHM - Pro Premium Upgrade (${tokensToGrant.toLocaleString()} tokens)`;
 
       metadata.plan = body.plan;
       metadata.tokens = String(tokensToGrant);
@@ -248,7 +248,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           statusCode: 400,
           headers: corsHeaders,
           body: JSON.stringify({
-            error: 'トークン追加購入はProプラン加入者のみご利用いただけます。先にプランをアップグレードしてください。'
+            error: 'クレジット追加購入はProプラン加入者のみご利用いただけます。先にプランをアップグレードしてください。'
           }),
         };
       }
@@ -270,12 +270,12 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           statusCode: 400,
           headers: corsHeaders,
           body: JSON.stringify({
-            error: `トークン残高が上限(${maxBalance.toLocaleString()})に達しています。消費後に追加購入してください。`
+            error: `クレジット残高が上限(${maxBalance.toLocaleString()})に達しています。消費後に追加購入してください。`
           }),
         };
       }
 
-      description = `CineGen JP - Token Top-Up (${tokensToGrant.toLocaleString()} tokens)`;
+      description = `ALGORiTHM - Token Top-Up (${tokensToGrant.toLocaleString()} tokens)`;
       metadata.tokensAmount = String(tokensToGrant);
       metadata.planTier = userRecord.plan_tier;
 

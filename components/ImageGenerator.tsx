@@ -74,7 +74,7 @@ export const ImageGenerator: React.FC<Props> = ({
 
     const validation = await validateTokensForGeneration(user.uid, COST_PER_IMAGE);
     if (!validation.valid) {
-      alert(`${validation.reason}\n\nプランをアップグレードするか、トークンを追加購入してください。`);
+      alert(`${validation.reason}\n\nプランをアップグレードするか、クレジットを追加購入してください。`);
       onOpenPricing();
       return;
     }
@@ -125,7 +125,7 @@ export const ImageGenerator: React.FC<Props> = ({
       
       // Pre-check tokens
       if (user && user.tokens < COST_PER_IMAGE) {
-          alert(`トークンが不足したため、一括生成を停止します。`);
+          alert(`クレジットが不足したため、一括生成を停止します。`);
           stopSignalRef.current = true;
           onOpenPricing();
           break;
@@ -427,7 +427,7 @@ export const ImageGenerator: React.FC<Props> = ({
 
                {/* Real-time Wallet */}
                <div className="flex justify-between items-center text-xs pt-1 border-t border-zinc-800">
-                  <span className="text-zinc-500">残トークン:</span>
+                  <span className="text-zinc-500">残クレジット:</span>
                   <span className="font-mono font-bold text-yellow-500">
                      {user?.tokens.toLocaleString()} t
                   </span>

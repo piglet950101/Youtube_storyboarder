@@ -301,7 +301,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         window.location.href = data.checkoutUrl;
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'トークン購入に失敗しました';
+      const message = err instanceof Error ? err.message : 'クレジット購入に失敗しました';
       setError(message);
       throw err;
     }
